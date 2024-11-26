@@ -3,11 +3,11 @@
 #include "Chunk.h"
 #include "Components/BoxComponent.h"
 
-// Sets default values
 AChunk::AChunk()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
+	
+	State = EState::Unloaded;
 	
 	SceneRoot = CreateDefaultSubobject<USceneComponent>("SceneRoot");
 	RootComponent = SceneRoot;
@@ -20,18 +20,10 @@ AChunk::AChunk()
 	Border->SetGenerateOverlapEvents(false);
 }
 
-// Called when the game starts or when spawned
 void AChunk::BeginPlay()
 {
 	Super::BeginPlay();
 	
-}
-
-// Called every frame
-void AChunk::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
 }
 
 FIntVector AChunk::ActorLocationToChunkLocation(const FVector& ActorLocation)
@@ -57,4 +49,24 @@ FIntVector AChunk::ChunkWorldLocationToChunkLocation(const FVector& WorldLocatio
 FVector AChunk::MakeWorldLocation(const FIntVector& ChunkLocation)
 {
 	return FVector(ChunkLocation.X * 1600, ChunkLocation.Y * 1600, ChunkLocation.Z * 1600);
+}
+
+void AChunk::LoadChunk()
+{
+	State = EState::Loading;
+
+	SetHidden(false);
+	// TODO load blocks here
+	
+	State = EState::Loaded;
+}
+
+void AChunk::UnloadChunk()
+{
+	State = EState::Unloading;
+	
+	SetHidden(true);
+	// TODO unload blocks here
+	
+	State = EState::Unloaded;
 }

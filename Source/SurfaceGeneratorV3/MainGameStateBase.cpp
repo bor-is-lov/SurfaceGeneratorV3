@@ -23,6 +23,29 @@ void AMainGameStateBase::DestroyChunk(const FIntVector ChunkLocation)
 	}
 }
 
+void AMainGameStateBase::PlaceChunk(const FIntVector ChunkLocation)
+{
+	AChunk* Ptr;
+	if (ChunksPool.Dequeue(Ptr))
+	{
+		Ptr->SetActorLocation(AChunk::MakeWorldLocation(ChunkLocation));
+		Ptr->LoadChunk();
+		ChunksMap.Add(ChunkLocation, Ptr);
+	}
+	else
+		SpawnChunk(ChunkLocation);
+}
+
+void AMainGameStateBase::ExtractChunk(const FIntVector ChunkLocation)
+{
+	if(ChunksMap.Contains(ChunkLocation))
+	{
+		(*ChunksMap.Find(ChunkLocation))->UnloadChunk();
+		ChunksPool.Enqueue(*ChunksMap.Find(ChunkLocation));
+		ChunksMap.Remove(ChunkLocation);
+	}
+}
+
 AChunk* AMainGameStateBase::GetChunk(const FIntVector ChunkLocation)
 {
 	if (!ChunksMap.Contains(ChunkLocation))

@@ -16,12 +16,16 @@ class SURFACEGENERATORV3_API AMainGameStateBase : public AGameStateBase
 	GENERATED_BODY()
 
 	TMap<FIntVector, AChunk*> ChunksMap;
+	TQueue<AChunk*> ChunksPool;
+	
+	void SpawnChunk(const FIntVector ChunkLocation);
+	void DestroyChunk(const FIntVector ChunkLocation);
 	
 public:
 	AMainGameStateBase();
-
-	void SpawnChunk(const FIntVector ChunkLocation);
-	void DestroyChunk(const FIntVector ChunkLocation);
+	
+	void PlaceChunk(const FIntVector ChunkLocation);
+	void ExtractChunk(const FIntVector ChunkLocation);
 	
 	UFUNCTION(BlueprintCallable)
 	AChunk* GetChunk(const FIntVector ChunkLocation);
