@@ -8,7 +8,9 @@
 #include "MainGameStateBase.generated.h"
 
 /**
- * Contains map of Chunks and their location
+ * Contains:
+ * Map of Chunks and their location;
+ * Array of Classes for all blocks in game
  */
 UCLASS()
 class SURFACEGENERATORV3_API AMainGameStateBase : public AGameStateBase
@@ -23,6 +25,9 @@ class SURFACEGENERATORV3_API AMainGameStateBase : public AGameStateBase
 	
 public:
 	AMainGameStateBase();
+	
+	UPROPERTY(EditAnywhere)
+	TArray<TSubclassOf<UInstancedStaticMeshComponent>> BlocksClasses;
 	
 	void PlaceChunk(const FIntVector ChunkLocation);
 	void ExtractChunk(const FIntVector ChunkLocation);

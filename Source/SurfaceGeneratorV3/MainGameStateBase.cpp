@@ -11,6 +11,7 @@ AMainGameStateBase::AMainGameStateBase()
 void AMainGameStateBase::SpawnChunk(const FIntVector ChunkLocation)
 {
 	AChunk* Ptr = GetWorld()->SpawnActor<AChunk>(AChunk::MakeWorldLocation(ChunkLocation), FRotator::ZeroRotator);
+	Ptr->LoadChunk();
 	ChunksMap.Add(ChunkLocation, Ptr);
 }
 
@@ -40,8 +41,9 @@ void AMainGameStateBase::ExtractChunk(const FIntVector ChunkLocation)
 {
 	if(ChunksMap.Contains(ChunkLocation))
 	{
-		(*ChunksMap.Find(ChunkLocation))->UnloadChunk();
-		ChunksPool.Enqueue(*ChunksMap.Find(ChunkLocation));
+		auto Ptr = *ChunksMap.Find(ChunkLocation);
+		Ptr->UnloadChunk();
+		ChunksPool.Enqueue(Ptr);
 		ChunksMap.Remove(ChunkLocation);
 	}
 }

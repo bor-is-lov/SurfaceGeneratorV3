@@ -1,7 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Chunk.h"
+
+#include "MainGameStateBase.h"
 #include "Components/BoxComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 
 AChunk::AChunk()
 {
@@ -18,12 +21,25 @@ AChunk::AChunk()
 	Border->SetRelativeLocation(FVector(800, 800, 800));
 	Border->bHiddenInGame = false;
 	Border->SetGenerateOverlapEvents(false);
+	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
 }
 
 void AChunk::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	if (auto GameState = GetWorld()->GetGameState<AMainGameStateBase>())
+	{
+		TArray<TSubclassOf<UInstancedStaticMeshComponent>>* BlocksClasses = &GameState->BlocksClasses;
+		if(!BlocksClasses->IsEmpty())
+			for(auto BlockClass : *BlocksClasses)
+			{
+				auto Ptr = NewObject<UInstancedStaticMeshComponent>(this, BlockClass);
+				Ptr->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+				Ptr->RegisterComponent();
+				Blocks.Add(Ptr);
+			}
+	}
 }
 
 FIntVector AChunk::ActorLocationToChunkLocation(const FVector& ActorLocation)
@@ -51,22 +67,37 @@ FVector AChunk::MakeWorldLocation(const FIntVector& ChunkLocation)
 	return FVector(ChunkLocation.X * 1600, ChunkLocation.Y * 1600, ChunkLocation.Z * 1600);
 }
 
-void AChunk::LoadChunk()
+bool AChunk::LoadChunk()
 {
+	if (State != EState::Unloaded)
+		return false;
+	
 	State = EState::Loading;
 
+	if(!Blocks.IsEmpty())
+		for(int x = 0; x < 16; x++)
+			for(int y = 0; y < 16; y++)
+				Blocks[0]->AddInstance(FTransform(FVector(x * 100 + 50, y * 100 + 50, 50)));
+	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
 	SetHidden(false);
-	// TODO load blocks here
 	
 	State = EState::Loaded;
+	return true;
 }
 
-void AChunk::UnloadChunk()
+bool AChunk::UnloadChunk()
 {
+	if (State != EState::Loaded)
+		return false;
+	
 	State = EState::Unloading;
 	
+	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
 	SetHidden(true);
-	// TODO unload blocks here
+	if(!Blocks.IsEmpty())
+		for(auto Block : Blocks)
+			Block->ClearInstances();
 	
 	State = EState::Unloaded;
+	return true;
 }

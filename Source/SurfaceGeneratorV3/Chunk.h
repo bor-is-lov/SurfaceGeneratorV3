@@ -14,13 +14,13 @@ class SURFACEGENERATORV3_API AChunk : public AActor
 {
 	GENERATED_BODY()
 	
-public:	
-	AChunk();
-
+public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USceneComponent* SceneRoot;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UBoxComponent* Border;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TArray<UInstancedStaticMeshComponent*> Blocks;
 	
 	enum class EState{ Unloaded, Loading, Loaded, Unloading };
 	
@@ -29,11 +29,15 @@ protected:
 
 	EState State;
 
-public:	
+public:
+	AChunk();
+	
 	static FIntVector ActorLocationToChunkLocation(const FVector& ActorLocation);
 	static FIntVector ChunkWorldLocationToChunkLocation(const FVector& WorldLocation);
 	static FVector MakeWorldLocation(const FIntVector& ChunkLocation);
 	
-	void LoadChunk();
-	void UnloadChunk();
+	bool LoadChunk();
+	bool UnloadChunk();
+
+	inline EState GetState() const { return State; }
 };
