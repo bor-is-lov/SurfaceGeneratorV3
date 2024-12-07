@@ -21,7 +21,6 @@ AChunk::AChunk()
 	Border->SetRelativeLocation(FVector(800, 800, 800));
 	Border->bHiddenInGame = false;
 	Border->SetGenerateOverlapEvents(false);
-	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
 }
 
 void AChunk::BeginPlay()
@@ -73,14 +72,15 @@ bool AChunk::LoadChunk()
 		return false;
 	
 	State = EState::Loading;
+	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
 
 	if(!Blocks.IsEmpty())
 		for(int x = 0; x < 16; x++)
 			for(int y = 0; y < 16; y++)
 				Blocks[0]->AddInstance(FTransform(FVector(x * 100 + 50, y * 100 + 50, 50)));
-	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
 	SetHidden(false);
 	
+	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
 	State = EState::Loaded;
 	return true;
 }
@@ -91,13 +91,14 @@ bool AChunk::UnloadChunk()
 		return false;
 	
 	State = EState::Unloading;
-	
 	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
+	
 	SetHidden(true);
 	if(!Blocks.IsEmpty())
 		for(auto Block : Blocks)
 			Block->ClearInstances();
 	
+	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
 	State = EState::Unloaded;
 	return true;
 }
