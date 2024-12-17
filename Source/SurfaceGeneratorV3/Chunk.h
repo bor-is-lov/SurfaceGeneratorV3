@@ -26,7 +26,7 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
-
+	
 	EState State;
 
 public:
@@ -36,8 +36,13 @@ public:
 	static FIntVector ChunkWorldLocationToChunkLocation(const FVector& WorldLocation);
 	static FVector MakeWorldLocation(const FIntVector& ChunkLocation);
 	
-	bool LoadChunk();
-	bool UnloadChunk();
+	void StartLoading();
+	void StartUnloading();
+	// Stops loading in safe manner way. Doesn't unload chunk.
+	void CloseLoading();
 
 	inline EState GetState() const { return State; }
+
+	void EndLoading();
+	void EndUnloading();
 };

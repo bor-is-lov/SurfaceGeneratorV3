@@ -27,6 +27,7 @@ void AChunk::BeginPlay()
 {
 	Super::BeginPlay();
 
+	SetActorHiddenInGame(true);
 	if (auto GameState = GetWorld()->GetGameState<AMainGameStateBase>())
 	{
 		TArray<TSubclassOf<UInstancedStaticMeshComponent>>* BlocksClasses = &GameState->BlocksClasses;
@@ -66,39 +67,61 @@ FVector AChunk::MakeWorldLocation(const FIntVector& ChunkLocation)
 	return FVector(ChunkLocation.X * 1600, ChunkLocation.Y * 1600, ChunkLocation.Z * 1600);
 }
 
-bool AChunk::LoadChunk()
+void AChunk::StartLoading()
 {
 	if (State != EState::Unloaded)
-		return false;
+		return;
 	
 	State = EState::Loading;
 	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
-
 	if(!Blocks.IsEmpty())
 		for(int x = 0; x < 16; x++)
 			for(int y = 0; y < 16; y++)
-				Blocks[0]->AddInstance(FTransform(FVector(x * 100 + 50, y * 100 + 50, 50)));
-	SetHidden(false);
-	
-	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
-	State = EState::Loaded;
-	return true;
+				GetWorld()->GetGameStateChecked<AMainGameStateBase>()->AddToSpawnInstancesQueue(this, 0, FIntVector(x, y, 0));
 }
 
-bool AChunk::UnloadChunk()
+void AChunk::StartUnloading()
 {
 	if (State != EState::Loaded)
-		return false;
+		return;
 	
 	State = EState::Unloading;
 	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
-	
-	SetHidden(true);
+	SetActorHiddenInGame(true);
 	if(!Blocks.IsEmpty())
-		for(auto Block : Blocks)
-			Block->ClearInstances();
+		for(size_t i = 0; i < Blocks.Num(); i++)
+			GetWorld()->GetGameStateChecked<AMainGameStateBase>()->AddToUnloadBlocksQueue(this, i);
+}
+
+void AChunk::CloseLoading()
+{
+	if (State != EState::Loading)
+		return;
+	for(auto Tuple = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->SpawnInstancesQueue.GetHead(); Tuple != nullptr;)
+	{
+		auto ToDel = Tuple;
+		Tuple = Tuple->GetNextNode();
+		if(this == ToDel->GetValue().Get<0>())
+			GetWorld()->GetGameStateChecked<AMainGameStateBase>()->SpawnInstancesQueue.RemoveNode(ToDel);
+	}
+	State = EState::Unloaded;
+}
+
+void AChunk::EndLoading()
+{
+	if (State != EState::Loading)
+		return;
+	
+	SetActorHiddenInGame(false);
+	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
+	State = EState::Loaded;
+}
+
+void AChunk::EndUnloading()
+{
+	if (State != EState::Unloading)
+		return;
 	
 	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
 	State = EState::Unloaded;
-	return true;
 }
