@@ -29,4 +29,6 @@ public:
 	virtual void SetupInputComponent() override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+
+	inline int GetRenderDistance() const { return RenderDistance; }
 };
