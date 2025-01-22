@@ -25,44 +25,41 @@ void AMainGameStateBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	for(int i = 0; i < 2; i++)
+	if(!ClearInstancesQueue.IsEmpty())
 	{
-		if(!ClearInstancesQueue.IsEmpty())
+		auto Tuple = ClearInstancesQueue.GetHead()->GetValue();
+		Tuple.Get<0>()->Blocks[Tuple.Get<1>()]->ClearInstances();
+		ClearInstancesQueue.RemoveNode(ClearInstancesQueue.GetHead());
+		bool ToEndUnloading = true;
+		for(auto Tuple2 : ClearInstancesQueue)
+			if(Tuple2.Get<0>() == Tuple.Get<0>())
+			{
+				ToEndUnloading = false;
+				break;
+			}
+		if(ToEndUnloading)
+			Tuple.Get<0>()->EndUnloading();
+	}
+	else
+		if(!SpawnInstancesQueue.IsEmpty())
 		{
-			auto Tuple = ClearInstancesQueue.GetHead()->GetValue();
-			Tuple.Get<0>()->Blocks[Tuple.Get<1>()]->ClearInstances();
-			ClearInstancesQueue.RemoveNode(ClearInstancesQueue.GetHead());
-			bool ToEndUnloading = true;
-			for(auto Tuple2 : ClearInstancesQueue)
+			TTuple<AChunk*, TArray<TTuple<size_t, FIntVector>>> Tuple = SpawnInstancesQueue.GetHead()->GetValue();
+			for(int i = 0; i < Tuple.Get<1>().Num(); i++)
+			{
+				FVector Location = FVector(50 + Tuple.Get<1>()[i].Get<1>().X * 100, 50 + Tuple.Get<1>()[i].Get<1>().Y * 100, 50 + Tuple.Get<1>()[i].Get<1>().Z * 100);
+				Tuple.Get<0>()->Blocks[Tuple.Get<1>()[i].Get<0>()]->AddInstance(FTransform(Location));
+			}
+			SpawnInstancesQueue.RemoveNode(SpawnInstancesQueue.GetHead());
+			bool ToEndLoading = true;
+			for(auto Tuple2 : SpawnInstancesQueue)
 				if(Tuple2.Get<0>() == Tuple.Get<0>())
 				{
-					ToEndUnloading = false;
+					ToEndLoading = false;
 					break;
 				}
-			if(ToEndUnloading)
-				Tuple.Get<0>()->EndUnloading();
+			if(ToEndLoading)
+				Tuple.Get<0>()->EndLoading();
 		}
-		else
-			for(int j = 0; j < 256; j++)
-				if(!SpawnInstancesQueue.IsEmpty())
-				{
-					TTuple<AChunk*, size_t, FIntVector> Tuple = SpawnInstancesQueue.GetHead()->GetValue();
-					FVector Location = FVector(50 + Tuple.Get<2>().X * 100, 50 + Tuple.Get<2>().Y * 100, 50 + Tuple.Get<2>().Z * 100);
-					Tuple.Get<0>()->Blocks[Tuple.Get<1>()]->AddInstance(FTransform(Location));
-					SpawnInstancesQueue.RemoveNode(SpawnInstancesQueue.GetHead());
-					bool ToEndLoading = true;
-					for(auto Tuple2 : SpawnInstancesQueue)
-						if(Tuple2.Get<0>() == Tuple.Get<0>())
-						{
-							ToEndLoading = false;
-							break;
-						}
-					if(ToEndLoading)
-						Tuple.Get<0>()->EndLoading();
-				}
-				else
-					break;
-	}
 }
 
 void AMainGameStateBase::SpawnChunk(const FIntVector ChunkLocation)
@@ -125,12 +122,12 @@ void AMainGameStateBase::ExtractChunk(const FIntVector ChunkLocation)
 
 void AMainGameStateBase::AddToUnloadBlocksQueue(AChunk* Chunk, size_t BlockIndex)
 {
-	ClearInstancesQueue.AddTail(TTuple<AChunk*, size_t>(Chunk, BlockIndex));
+	ClearInstancesQueue.AddTail({Chunk, BlockIndex});
 }
 
-void AMainGameStateBase::AddToSpawnInstancesQueue(AChunk* Chunk, size_t BlockIndex, FIntVector Location)
+void AMainGameStateBase::AddToSpawnInstancesQueue(AChunk* Chunk, TArray<TTuple<size_t, FIntVector>>& ToSpawn)
 {
-	SpawnInstancesQueue.AddTail(TTuple<AChunk*, size_t, FIntVector>(Chunk, BlockIndex, Location));
+	SpawnInstancesQueue.AddTail({Chunk, ToSpawn});
 }
 
 AChunk* AMainGameStateBase::GetChunk(const FIntVector ChunkLocation)

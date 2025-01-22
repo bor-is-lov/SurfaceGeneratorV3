@@ -20,7 +20,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UBoxComponent* Border;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TArray<UInstancedStaticMeshComponent*> Blocks;
+	TArray<TObjectPtr<UInstancedStaticMeshComponent>> Blocks;
 	
 	enum class EState{ Unloaded, Loading, Loaded, Unloading };
 	
@@ -38,7 +38,7 @@ public:
 	
 	void StartLoading();
 	void StartUnloading();
-	// Stops loading in safe manner way. Doesn't unload chunk.
+	// Stops loading in a safe manner. Doesn't unload chunk.
 	void CloseLoading();
 
 	inline EState GetState() const { return State; }

@@ -22,7 +22,7 @@ void AMainPlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	PlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
-	Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(RenderDistance, PlayerChunkLocation);
+	Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(RenderDistance, ZScale, PlayerChunkLocation);
 }
 
 void AMainPlayerController::Tick(float DeltaTime)
@@ -32,6 +32,6 @@ void AMainPlayerController::Tick(float DeltaTime)
 	if (PlayerChunkLocation != AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation()))
 	{
 		PlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
-		Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(RenderDistance, PlayerChunkLocation);
+		Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(RenderDistance, ZScale, PlayerChunkLocation);
 	}
 }

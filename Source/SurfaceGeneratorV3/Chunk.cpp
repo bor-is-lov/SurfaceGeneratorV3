@@ -19,13 +19,13 @@ AChunk::AChunk()
 	Border->SetupAttachment(RootComponent);
 	Border->SetBoxExtent(FVector(800, 800, 800), false);
 	Border->SetRelativeLocation(FVector(800, 800, 800));
-	Border->bHiddenInGame = false;
 	Border->SetGenerateOverlapEvents(false);
 }
 
 void AChunk::BeginPlay()
 {
 	Super::BeginPlay();
+	SetActorTickEnabled(false);
 
 	SetActorHiddenInGame(true);
 	if (auto GameState = GetWorld()->GetGameState<AMainGameStateBase>())
@@ -37,6 +37,7 @@ void AChunk::BeginPlay()
 				auto Ptr = NewObject<UInstancedStaticMeshComponent>(this, BlockClass);
 				Ptr->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 				Ptr->RegisterComponent();
+				Ptr->SetComponentTickEnabled(false);
 				Blocks.Add(Ptr);
 			}
 	}
@@ -74,10 +75,13 @@ void AChunk::StartLoading()
 	
 	State = EState::Loading;
 	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
+
+	TArray<TTuple<size_t, FIntVector>> ToSpawn;
 	if(!Blocks.IsEmpty())
 		for(int x = 0; x < 16; x++)
 			for(int y = 0; y < 16; y++)
-				GetWorld()->GetGameStateChecked<AMainGameStateBase>()->AddToSpawnInstancesQueue(this, 0, FIntVector(x, y, 0));
+				ToSpawn.Add({ 0, FIntVector(x, y, 0) });
+	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->AddToSpawnInstancesQueue(this, ToSpawn);
 }
 
 void AChunk::StartUnloading()
@@ -102,7 +106,10 @@ void AChunk::CloseLoading()
 		auto ToDel = Tuple;
 		Tuple = Tuple->GetNextNode();
 		if(this == ToDel->GetValue().Get<0>())
+		{
 			GetWorld()->GetGameStateChecked<AMainGameStateBase>()->SpawnInstancesQueue.RemoveNode(ToDel);
+			break;
+		}
 	}
 	State = EState::Unloaded;
 }

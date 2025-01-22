@@ -20,10 +20,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputMappingContext> InputMapping;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chunk")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Chunk")
 	FIntVector PlayerChunkLocation;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chunk")
 	int RenderDistance = 1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chunk")
+	float ZScale = 0.5f;
 	
 public:	
 	virtual void SetupInputComponent() override;
@@ -31,4 +33,5 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	inline int GetRenderDistance() const { return RenderDistance; }
+	inline int GetZScale() const { return ZScale; }
 };
