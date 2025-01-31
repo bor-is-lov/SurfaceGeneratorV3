@@ -9,6 +9,9 @@
 
 AMainGameStateBase::AMainGameStateBase()
 {
+	srand(time(NULL));
+	TerrainGenerator = new FTerrainGenerator(rand(), this);
+	
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 
@@ -19,6 +22,11 @@ AMainGameStateBase::AMainGameStateBase()
 	    	AChunk* Ptr = GetWorld()->SpawnActor<AChunk>();
 	    	ChunksPool.Enqueue(Ptr);
 	    }
+}
+
+AMainGameStateBase::~AMainGameStateBase()
+{
+	delete TerrainGenerator;
 }
 
 void AMainGameStateBase::Tick(float DeltaTime)
@@ -43,22 +51,32 @@ void AMainGameStateBase::Tick(float DeltaTime)
 	else
 		if(!SpawnInstancesQueue.IsEmpty())
 		{
-			TTuple<AChunk*, TArray<TTuple<size_t, FIntVector>>> Tuple = SpawnInstancesQueue.GetHead()->GetValue();
-			for(int i = 0; i < Tuple.Get<1>().Num(); i++)
+			TTuple<AChunk*, TArray<TTuple<size_t, FIntVector>>>& Tuple = SpawnInstancesQueue.GetHead()->GetValue();
+			for(int i = 0; i < 256; i++)
 			{
-				FVector Location = FVector(50 + Tuple.Get<1>()[i].Get<1>().X * 100, 50 + Tuple.Get<1>()[i].Get<1>().Y * 100, 50 + Tuple.Get<1>()[i].Get<1>().Z * 100);
+				if (i >= Tuple.Get<1>().Num())
+					break;
+				FVector Location = FVector(
+					50 + Tuple.Get<1>()[i].Get<1>().X * 100,
+					50 + Tuple.Get<1>()[i].Get<1>().Y * 100,
+					50 + Tuple.Get<1>()[i].Get<1>().Z * 100);
 				Tuple.Get<0>()->Blocks[Tuple.Get<1>()[i].Get<0>()]->AddInstance(FTransform(Location));
 			}
-			SpawnInstancesQueue.RemoveNode(SpawnInstancesQueue.GetHead());
-			bool ToEndLoading = true;
-			for(auto Tuple2 : SpawnInstancesQueue)
-				if(Tuple2.Get<0>() == Tuple.Get<0>())
-				{
-					ToEndLoading = false;
-					break;
-				}
-			if(ToEndLoading)
-				Tuple.Get<0>()->EndLoading();
+			Tuple.Get<1>().RemoveAt(0, FMath::Min(256, Tuple.Get<1>().Num()));
+			if (Tuple.Get<1>().IsEmpty())
+			{
+				AChunk* ChunkPtr = Tuple.Get<0>();
+				SpawnInstancesQueue.RemoveNode(SpawnInstancesQueue.GetHead());
+				bool ToEndLoading = true;
+				for(auto Tuple2 : SpawnInstancesQueue)
+					if(Tuple2.Get<0>() == ChunkPtr)
+					{
+						ToEndLoading = false;
+						break;
+					}
+				if(ToEndLoading)
+					ChunkPtr->EndLoading();
+			}
 		}
 }
 

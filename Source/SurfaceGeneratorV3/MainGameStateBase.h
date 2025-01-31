@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Chunk.h"
+#include "TerrainGenerator.h"
 #include "GameFramework/GameStateBase.h"
 #include "MainGameStateBase.generated.h"
 
@@ -32,9 +33,12 @@ class SURFACEGENERATORV3_API AMainGameStateBase : public AGameStateBase
 	
 public:
 	AMainGameStateBase();
+	~AMainGameStateBase();
 
 	void Tick(float DeltaTime) override;
 	
+	FTerrainGenerator* TerrainGenerator;
+
 	UPROPERTY(EditAnywhere)
 	TArray<TSubclassOf<UInstancedStaticMeshComponent>> BlocksClasses;
 	
