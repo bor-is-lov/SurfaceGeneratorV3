@@ -33,9 +33,10 @@ class SURFACEGENERATORV3_API AMainGameStateBase : public AGameStateBase
 	
 public:
 	AMainGameStateBase();
-	~AMainGameStateBase();
+	virtual ~AMainGameStateBase() override;
 
-	void Tick(float DeltaTime) override;
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 	
 	FTerrainGenerator* TerrainGenerator;
 
