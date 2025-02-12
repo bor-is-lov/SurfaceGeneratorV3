@@ -75,13 +75,7 @@ void AChunk::StartLoading()
 	
 	State = EState::Loading;
 	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
-
-	TArray<TTuple<size_t, FIntVector>> ToSpawn;
-	if(!Blocks.IsEmpty())
-		for(int x = 0; x < 16; x++)
-			for(int y = 0; y < 16; y++)
-				ToSpawn.Add({ 0, FIntVector(x, y, 0) });
-	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->AddToSpawnInstancesQueue(this, ToSpawn);
+	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->AddChunkToSpawnQueue(this);
 }
 
 void AChunk::StartUnloading()

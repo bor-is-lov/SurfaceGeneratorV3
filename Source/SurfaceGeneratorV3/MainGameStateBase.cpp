@@ -9,16 +9,29 @@
 
 AMainGameStateBase::AMainGameStateBase()
 {
+	srand(time(NULL));
+	TerrainGenerator = new FTerrainGenerator(rand(), this);
+	
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
+}
 
+AMainGameStateBase::~AMainGameStateBase()
+{
+	delete TerrainGenerator;
+}
+
+void AMainGameStateBase::BeginPlay()
+{
+	Super::BeginPlay();
+	
 	AMainPlayerController* Controller = Cast<AMainPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
 	if(Controller)
-	    for (int i = 0; i < pow(Controller->GetRenderDistance() * 2 + 1, 3) * 2; i++)
-	    {
-	    	AChunk* Ptr = GetWorld()->SpawnActor<AChunk>();
-	    	ChunksPool.Enqueue(Ptr);
-	    }
+		for (int i = 0; i < pow(Controller->GetRenderDistance() * 2 + 1, 3); i++)
+		{
+			AChunk* Ptr = GetWorld()->SpawnActor<AChunk>();
+			ChunksPool.Enqueue(Ptr);
+		}
 }
 
 void AMainGameStateBase::Tick(float DeltaTime)
@@ -43,22 +56,38 @@ void AMainGameStateBase::Tick(float DeltaTime)
 	else
 		if(!SpawnInstancesQueue.IsEmpty())
 		{
-			TTuple<AChunk*, TArray<TTuple<size_t, FIntVector>>> Tuple = SpawnInstancesQueue.GetHead()->GetValue();
-			for(int i = 0; i < Tuple.Get<1>().Num(); i++)
+			TTuple<AChunk*, TArray<TTuple<size_t, FIntVector>>>& Tuple = SpawnInstancesQueue.GetHead()->GetValue();
+			static TArray<TArray<FTransform>> BlocksTransforms;
+			BlocksTransforms.Empty();
+			BlocksTransforms.SetNum(BlocksClasses.Num());
+			for(int i = 0; i < 256; i++)
 			{
-				FVector Location = FVector(50 + Tuple.Get<1>()[i].Get<1>().X * 100, 50 + Tuple.Get<1>()[i].Get<1>().Y * 100, 50 + Tuple.Get<1>()[i].Get<1>().Z * 100);
-				Tuple.Get<0>()->Blocks[Tuple.Get<1>()[i].Get<0>()]->AddInstance(FTransform(Location));
-			}
-			SpawnInstancesQueue.RemoveNode(SpawnInstancesQueue.GetHead());
-			bool ToEndLoading = true;
-			for(auto Tuple2 : SpawnInstancesQueue)
-				if(Tuple2.Get<0>() == Tuple.Get<0>())
-				{
-					ToEndLoading = false;
+				if (i >= Tuple.Get<1>().Num())
 					break;
-				}
-			if(ToEndLoading)
-				Tuple.Get<0>()->EndLoading();
+				FVector Location = FVector(
+					50 + Tuple.Get<1>()[i].Get<1>().X * 100,
+					50 + Tuple.Get<1>()[i].Get<1>().Y * 100,
+					50 + Tuple.Get<1>()[i].Get<1>().Z * 100);
+				BlocksTransforms[Tuple.Get<1>()[i].Get<0>()].Emplace(Location);
+			}
+			for(int i = 0; i < BlocksTransforms.Num(); i++)
+				Tuple.Get<0>()->Blocks[Tuple.Get<1>()[i].Get<0>()]->AddInstances(BlocksTransforms[i], false);
+			
+			Tuple.Get<1>().RemoveAt(0, FMath::Min(256, Tuple.Get<1>().Num()));
+			if (Tuple.Get<1>().IsEmpty())
+			{
+				AChunk* ChunkPtr = Tuple.Get<0>();
+				SpawnInstancesQueue.RemoveNode(SpawnInstancesQueue.GetHead());
+				bool ToEndLoading = true;
+				for(auto Tuple2 : SpawnInstancesQueue)
+					if(Tuple2.Get<0>() == ChunkPtr)
+					{
+						ToEndLoading = false;
+						break;
+					}
+				if(ToEndLoading)
+					ChunkPtr->EndLoading();
+			}
 		}
 }
 

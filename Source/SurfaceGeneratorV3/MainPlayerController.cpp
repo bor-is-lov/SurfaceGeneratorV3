@@ -5,6 +5,7 @@
 #include "Chunk.h"
 #include "EnhancedInputSubsystems.h"
 #include "MainGameModeBase.h"
+#include "MainGameStateBase.h"
 
 void AMainPlayerController::SetupInputComponent()
 {
@@ -23,6 +24,7 @@ void AMainPlayerController::BeginPlay()
 
 	PlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
 	Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(RenderDistance, ZScale, PlayerChunkLocation);
+	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->UpdateHeightMap(RenderDistance, PlayerChunkLocation);
 }
 
 void AMainPlayerController::Tick(float DeltaTime)
@@ -33,5 +35,6 @@ void AMainPlayerController::Tick(float DeltaTime)
 	{
 		PlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
 		Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(RenderDistance, ZScale, PlayerChunkLocation);
+		GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->UpdateHeightMap(RenderDistance, PlayerChunkLocation);
 	}
 }
