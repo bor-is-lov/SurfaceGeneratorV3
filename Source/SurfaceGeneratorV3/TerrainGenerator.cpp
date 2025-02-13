@@ -18,7 +18,7 @@ FTerrainGenerator::~FTerrainGenerator()
 	delete HeightMap;
 }
 
-void FTerrainGenerator::GenerateChunk(const AChunk* Chunk, TArray<TTuple<size_t, FIntVector>>& ToSpawn) const
+void FTerrainGenerator::GenerateChunk(const AChunk* Chunk, TArray<FBlockInfo>& ToSpawn) const
 {
 	const FIntVector ChunkLocation = AChunk::ChunkWorldLocationToChunkLocation(Chunk->GetActorLocation());
 	const FIntVector2 HeightMapKey = {ChunkLocation.X, ChunkLocation.Y};
@@ -51,7 +51,7 @@ void FTerrainGenerator::GenerateChunk(const AChunk* Chunk, TArray<TTuple<size_t,
 
 void FTerrainGenerator::AddChunkToSpawnQueue(AChunk* Chunk) const
 {
-	TArray<TTuple<size_t, FIntVector>> ToSpawn;
+	TArray<FBlockInfo> ToSpawn;
 	GenerateChunk(Chunk, ToSpawn);
 	if (!ToSpawn.IsEmpty())
 		OwnerGameStateBase->AddToSpawnInstancesQueue(Chunk, ToSpawn);

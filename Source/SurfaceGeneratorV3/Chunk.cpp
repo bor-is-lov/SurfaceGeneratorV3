@@ -38,7 +38,7 @@ void AChunk::BeginPlay()
 				Ptr->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 				Ptr->RegisterComponent();
 				Ptr->SetComponentTickEnabled(false);
-				Blocks.Add(Ptr);
+				BlockTypes.Add(Ptr);
 			}
 	}
 }
@@ -86,8 +86,8 @@ void AChunk::StartUnloading()
 	State = EState::Unloading;
 	Border->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
 	SetActorHiddenInGame(true);
-	if(!Blocks.IsEmpty())
-		for(size_t i = 0; i < Blocks.Num(); i++)
+	if(!BlockTypes.IsEmpty())
+		for(size_t i = 0; i < BlockTypes.Num(); i++)
 			GetWorld()->GetGameStateChecked<AMainGameStateBase>()->AddToUnloadBlocksQueue(this, i);
 }
 
@@ -95,11 +95,11 @@ void AChunk::CloseLoading()
 {
 	if (State != EState::Loading)
 		return;
-	for(auto Tuple = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->SpawnInstancesQueue.GetHead(); Tuple != nullptr;)
+	for(auto BlocksToSpawnInChunk = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->SpawnInstancesQueue.GetHead(); BlocksToSpawnInChunk != nullptr;)
 	{
-		auto ToDel = Tuple;
-		Tuple = Tuple->GetNextNode();
-		if(this == ToDel->GetValue().Get<0>())
+		auto ToDel = BlocksToSpawnInChunk;
+		BlocksToSpawnInChunk = BlocksToSpawnInChunk->GetNextNode();
+		if(this == ToDel->GetValue().Chunk)
 		{
 			GetWorld()->GetGameStateChecked<AMainGameStateBase>()->SpawnInstancesQueue.RemoveNode(ToDel);
 			break;

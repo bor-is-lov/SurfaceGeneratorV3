@@ -20,7 +20,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UBoxComponent* Border;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TArray<TObjectPtr<UInstancedStaticMeshComponent>> Blocks;
+	TArray<TObjectPtr<UInstancedStaticMeshComponent>> BlockTypes;
 	
 	enum class EState{ Unloaded, Loading, Loaded, Unloading };
 	
