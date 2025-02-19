@@ -15,8 +15,7 @@ public:
 	FTerrainGenerator(unsigned int Seed, AMainGameStateBase* Owner);
 	~FTerrainGenerator();
 
-	void GenerateChunk(const AChunk* Chunk, TArray<struct FBlockInfo>& ToSpawn) const;
-	void AddChunkToSpawnQueue(AChunk* Chunk) const;
+	void GenerateChunk(AChunk* Chunk) const;
 
-	void UpdateHeightMap(int RenderDistance, FIntVector PlayerChunkLocation);
+	void UpdateHeightMap(const int RenderDistance, const FIntVector& PlayerChunkLocation);
 };
