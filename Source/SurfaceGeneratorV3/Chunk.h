@@ -17,13 +17,18 @@ class SURFACEGENERATORV3_API AChunk : public AActor
 {
 	GENERATED_BODY()
 
-protected:
-	void UpdatePlanes();
+public:
+	enum class EState{ Unloaded, Loading, Loaded, Unloading };
+	
+protected:	
+	EState State;
 	
 public:
 	AChunk();
-
 	virtual void BeginPlay() override;
+
+	void LoadPlanes();
+	void UnloadPlanes();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USceneComponent* SceneRoot;
@@ -34,9 +39,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<TObjectPtr<UStaticMeshComponent>> Planes;
 	
+	void StartLoading();
+	void EndLoading();
+	void StartUnloading();
+	void EndUnloading();
+	// Stops loading in a safe manner. Doesn't unload chunk.
+	void CloseLoading();
 
-	void LoadChunk();
-	void UnloadChunk();
+	inline EState GetState() const { return State; }
 
 	void SetBlock(const size_t InChunkIndex, const size_t TypeIndex);
 	

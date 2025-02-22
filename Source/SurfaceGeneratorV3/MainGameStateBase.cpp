@@ -36,13 +36,30 @@ void AMainGameStateBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	
+	AChunk* Chunk;
+	for(int i = 0; i < 8; i++)
+	{
+		if(UnloadMeshesQueue.Dequeue(Chunk))
+		{
+			Chunk->UnloadPlanes();
+			Chunk->EndUnloading();
+		}
+		else if(!LoadMeshesQueue.IsEmpty())
+		{
+			Chunk = LoadMeshesQueue.GetHead()->GetValue();
+			Chunk->LoadPlanes();
+			Chunk->EndLoading();
+			LoadMeshesQueue.RemoveNode(LoadMeshesQueue.GetHead());
+		}
+		else
+			break;
+	}
 }
 
 void AMainGameStateBase::SpawnChunk(const FIntVector ChunkLocation)
 {
 	AChunk* Chunk = GetWorld()->SpawnActor<AChunk>(AChunk::MakeWorldLocation(ChunkLocation), FRotator::ZeroRotator);
-	Chunk->LoadChunk();
+	Chunk->StartLoading();
 	ChunksMap.Add(ChunkLocation, Chunk);
 }
 
@@ -59,9 +76,17 @@ void AMainGameStateBase::PlaceChunk(const FIntVector ChunkLocation)
 {
 	if (AChunk* Chunk; ChunksPool.Dequeue(Chunk))
 	{
-		Chunk->SetActorLocation(AChunk::MakeWorldLocation(ChunkLocation));
-		Chunk->LoadChunk();
-		ChunksMap.Add(ChunkLocation, Chunk);
+		if(Chunk->GetState() == AChunk::EState::Unloaded)
+		{
+			Chunk->SetActorLocation(AChunk::MakeWorldLocation(ChunkLocation));
+			Chunk->StartLoading();
+			ChunksMap.Add(ChunkLocation, Chunk);
+		}
+		else
+		{
+			ChunksPool.Enqueue(Chunk);
+			SpawnChunk(ChunkLocation);
+		}
 	}
 	else
 		SpawnChunk(ChunkLocation);
@@ -72,10 +97,31 @@ void AMainGameStateBase::ExtractChunk(const FIntVector ChunkLocation)
 	if(ChunksMap.Contains(ChunkLocation))
 	{
 		AChunk* Chunk = *ChunksMap.Find(ChunkLocation);
-		Chunk->UnloadChunk();
+		switch(Chunk->GetState())
+		{
+		case AChunk::EState::Loaded:
+			Chunk->StartUnloading();
+			break;
+		case AChunk::EState::Loading:
+			Chunk->CloseLoading();
+			Chunk->StartUnloading();
+			break;
+		default:
+			break;
+		}
 		ChunksPool.Enqueue(Chunk);
 		ChunksMap.Remove(ChunkLocation);
 	}
+}
+
+void AMainGameStateBase::AddToLoadMeshes(AChunk* Chunk)
+{
+	LoadMeshesQueue.AddTail(Chunk);
+}
+
+void AMainGameStateBase::AddToUnloadMeshes(AChunk* Chunk)
+{
+	UnloadMeshesQueue.Enqueue(Chunk);
 }
 
 AChunk* AMainGameStateBase::GetChunk(const FIntVector ChunkLocation)

@@ -4,12 +4,8 @@
 #include "MainGameStateBase.h"
 #include "Components/BoxComponent.h"
 
-void AChunk::UpdatePlanes()
+void AChunk::LoadPlanes()
 {
-	for(auto Plane : Planes)
-		Plane->ConditionalBeginDestroy();
-	Planes.Empty();
-
 	bool ShouldAddPlane[256] = {false};
 	bool PlaneAdded[256] = {false};
 	for(int z = 0; z < 16; z++)
@@ -73,6 +69,13 @@ void AChunk::UpdatePlanes()
 	}
 }
 
+void AChunk::UnloadPlanes()
+{
+	for(auto Plane : Planes)
+		Plane->ConditionalBeginDestroy();
+	Planes.Empty();
+}
+
 AChunk::AChunk()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -101,23 +104,40 @@ void AChunk::BeginPlay()
 	Border->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
-void AChunk::LoadChunk()
+void AChunk::StartLoading()
 {
+	State = EState::Loading;
 	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->GenerateChunk(this);
-	UpdatePlanes();
-		
+	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->AddToLoadMeshes(this);
+	Border->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+}
+
+void AChunk::EndLoading()
+{
+	State = EState::Loaded;
 	SetActorHiddenInGame(false);
 	Border->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
-void AChunk::UnloadChunk()
+void AChunk::StartUnloading()
 {
 	SetActorHiddenInGame(true);
 	Border->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	
+	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->AddToUnloadMeshes(this);
+}
 
-	for(auto Plane : Planes)
-		Plane->ConditionalBeginDestroy();
-	Planes.Empty();
+void AChunk::EndUnloading()
+{
+	SetActorHiddenInGame(true);
+	Border->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
+void AChunk::CloseLoading()
+{
+	TDoubleLinkedList<AChunk*>* LoadMeshesQueue = &GetWorld()->GetGameStateChecked<AMainGameStateBase>()->LoadMeshesQueue;
+	if(auto NodeToRemove = LoadMeshesQueue->FindNode(this))
+		LoadMeshesQueue->RemoveNode(NodeToRemove);
 }
 
 void AChunk::SetBlock(const size_t InChunkIndex, const size_t TypeIndex)
