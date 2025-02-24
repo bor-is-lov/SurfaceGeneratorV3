@@ -44,7 +44,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<FBlockData> BlocksData;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TArray<TObjectPtr<UStaticMeshComponent>> Planes;
+	class UHierarchicalInstancedStaticMeshComponent* Planes;
 	
 	void StartLoading();
 	void EndLoading();

@@ -3,6 +3,7 @@
 #include "Chunk.h"
 #include "MainGameStateBase.h"
 #include "Components/BoxComponent.h"
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
 
 void AChunk::LoadPlanes()
 {
@@ -16,9 +17,7 @@ void AChunk::LoadPlanes()
 
 void AChunk::UnloadPlanes()
 {
-	for(auto Plane : Planes)
-		Plane->ConditionalBeginDestroy();
-	Planes.Empty();
+	Planes->ClearInstances();
 }
 
 void AChunk::LoadPlanesZPositive()
@@ -66,21 +65,14 @@ void AChunk::LoadPlanesZPositive()
 					for(int y = y1; y <= y2; y++)
 						PlaneAdded[x * 16 + y] = true;
 
-				UStaticMeshComponent* Ptr = NewObject<UStaticMeshComponent>(this);
-				Ptr->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-				Ptr->RegisterComponent();
-				Ptr->SetComponentTickEnabled(false);
-				if (UStaticMesh* PlaneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")))
-					Ptr->SetStaticMesh(PlaneMesh);
 				const float PosX = (x1 + x2) / 2.0f * 100.0f + 50.0f;
 				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
 				const float ScaleX = x2 - x1 + 1.0f;
 				const float ScaleY = y2 - y1 + 1.0f;
-				Ptr->SetRelativeTransform(FTransform(
+				Planes->AddInstance(FTransform(
 					{0, 0, 0},
 					{PosX, PosY, z * 100.0f + 100.0f},
 					{ScaleX, ScaleY, 1.0f}));
-				Planes.Add(Ptr);
 			}
 		}
 	}
@@ -131,21 +123,14 @@ void AChunk::LoadPlanesXPositive()
 					for(int y = y1; y <= y2; y++)
 						PlaneAdded[z * 16 + y] = true;
 
-				UStaticMeshComponent* Ptr = NewObject<UStaticMeshComponent>(this);
-				Ptr->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-				Ptr->RegisterComponent();
-				Ptr->SetComponentTickEnabled(false);
-				if (UStaticMesh* PlaneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")))
-					Ptr->SetStaticMesh(PlaneMesh);
 				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
 				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
 				const float ScaleY = z2 - z1 + 1.0f;
 				const float ScaleX = y2 - y1 + 1.0f;
-				Ptr->SetRelativeTransform(FTransform(
+				Planes->AddInstance(FTransform(
 					{0, -90, 90},
 					{x * 100.0f + 100.0f, PosY, PosZ},
 					{ScaleX, ScaleY, 1.0f}));
-				Planes.Add(Ptr);
 			}
 		}
 	}
@@ -196,21 +181,14 @@ void AChunk::LoadPlanesYPositive()
 					for(int z = z1; z <= z2; z++)
 						PlaneAdded[x * 16 + z] = true;
 
-				UStaticMeshComponent* Ptr = NewObject<UStaticMeshComponent>(this);
-				Ptr->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-				Ptr->RegisterComponent();
-				Ptr->SetComponentTickEnabled(false);
-				if (UStaticMesh* PlaneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")))
-					Ptr->SetStaticMesh(PlaneMesh);
 				const float PosX = (x1 + x2) / 2.0f * 100.0f + 50.0f;
 				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
 				const float ScaleX = x2 - x1 + 1.0f;
 				const float ScaleY = z2 - z1 + 1.0f;
-				Ptr->SetRelativeTransform(FTransform(
+				Planes->AddInstance(FTransform(
 					{0, 0, 90},
 					{PosX, y * 100.0f + 100.0f, PosZ},
 					{ScaleX, ScaleY, 1.0f}));
-				Planes.Add(Ptr);
 			}
 		}
 	}
@@ -261,21 +239,14 @@ void AChunk::LoadPlanesZNegative()
 					for(int y = y1; y <= y2; y++)
 						PlaneAdded[x * 16 + y] = true;
 
-				UStaticMeshComponent* Ptr = NewObject<UStaticMeshComponent>(this);
-				Ptr->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-				Ptr->RegisterComponent();
-				Ptr->SetComponentTickEnabled(false);
-				if (UStaticMesh* PlaneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")))
-					Ptr->SetStaticMesh(PlaneMesh);
 				const float PosX = (x1 + x2) / 2.0f * 100.0f + 50.0f;
 				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
 				const float ScaleX = x2 - x1 + 1.0f;
 				const float ScaleY = y2 - y1 + 1.0f;
-				Ptr->SetRelativeTransform(FTransform(
+				Planes->AddInstance(FTransform(
 					{180, 0, 0},
 					{PosX, PosY, z * 100.0f},
 					{ScaleX, ScaleY, 1.0f}));
-				Planes.Add(Ptr);
 			}
 		}
 	}
@@ -326,21 +297,14 @@ void AChunk::LoadPlanesXNegative()
 					for(int y = y1; y <= y2; y++)
 						PlaneAdded[z * 16 + y] = true;
 
-				UStaticMeshComponent* Ptr = NewObject<UStaticMeshComponent>(this);
-				Ptr->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-				Ptr->RegisterComponent();
-				Ptr->SetComponentTickEnabled(false);
-				if (UStaticMesh* PlaneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")))
-					Ptr->SetStaticMesh(PlaneMesh);
 				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
 				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
 				const float ScaleY = z2 - z1 + 1.0f;
 				const float ScaleX = y2 - y1 + 1.0f;
-				Ptr->SetRelativeTransform(FTransform(
+				Planes->AddInstance(FTransform(
 					{0, 90, 90},
 					{x * 100.0f, PosY, PosZ},
 					{ScaleX, ScaleY, 1.0f}));
-				Planes.Add(Ptr);
 			}
 		}
 	}
@@ -391,21 +355,14 @@ void AChunk::LoadPlanesYNegative()
 					for(int z = z1; z <= z2; z++)
 						PlaneAdded[x * 16 + z] = true;
 
-				UStaticMeshComponent* Ptr = NewObject<UStaticMeshComponent>(this);
-				Ptr->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-				Ptr->RegisterComponent();
-				Ptr->SetComponentTickEnabled(false);
-				if (UStaticMesh* PlaneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")))
-					Ptr->SetStaticMesh(PlaneMesh);
 				const float PosX = (x1 + x2) / 2.0f * 100.0f + 50.0f;
 				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
 				const float ScaleX = x2 - x1 + 1.0f;
 				const float ScaleY = z2 - z1 + 1.0f;
-				Ptr->SetRelativeTransform(FTransform(
+				Planes->AddInstance(FTransform(
 					{0, 0, -90},
 					{PosX, y * 100.0f, PosZ},
 					{ScaleX, ScaleY, 1.0f}));
-				Planes.Add(Ptr);
 			}
 		}
 	}
@@ -425,6 +382,14 @@ AChunk::AChunk()
 	Border->SetGenerateOverlapEvents(false);
 	Border->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Border->SetComponentTickEnabled(false);
+
+	Planes = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>("Planes2");
+	Planes->SetupAttachment(RootComponent);
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Engine/BasicShapes/Plane.Plane"));
+	if(MeshAsset.Succeeded())
+		Planes->SetStaticMesh(MeshAsset.Object);
+	Planes->SetGenerateOverlapEvents(false);
+	Planes->SetComponentTickEnabled(false);
 	
 	BlocksData.SetNum(4096);
 }
