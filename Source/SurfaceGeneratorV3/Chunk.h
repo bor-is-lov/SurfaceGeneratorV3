@@ -22,6 +22,13 @@ public:
 	
 protected:	
 	EState State;
+
+	void LoadPlanesZPositive();
+	void LoadPlanesXPositive();
+	void LoadPlanesYPositive();
+	void LoadPlanesZNegative();
+	void LoadPlanesXNegative();
+	void LoadPlanesYNegative();
 	
 public:
 	AChunk();
