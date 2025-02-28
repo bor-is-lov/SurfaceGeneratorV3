@@ -421,6 +421,7 @@ void AChunk::EndLoading()
 
 void AChunk::StartUnloading()
 {
+	State = EState::Unloading;
 	SetActorHiddenInGame(true);
 	Border->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	
@@ -429,6 +430,7 @@ void AChunk::StartUnloading()
 
 void AChunk::EndUnloading()
 {
+	State = EState::Unloaded;
 	SetActorHiddenInGame(true);
 	Border->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
