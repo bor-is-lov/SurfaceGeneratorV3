@@ -37,6 +37,8 @@ public:
 	
 	UPROPERTY(EditAnywhere)
 	TArray<FBlockDefaults> BlocksDefaults;
+	UPROPERTY(EditAnywhere)
+	UMaterial* BlocksMaterial;
 	
 	AMainGameStateBase();
 	virtual ~AMainGameStateBase() override;

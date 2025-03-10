@@ -10,7 +10,6 @@ enum class EShape : uint8
 	Cube UMETA(DisplayName = "Cube")
 };
 
-
 USTRUCT(BlueprintType)
 struct FBlockDefaults
 {
@@ -22,4 +21,6 @@ struct FBlockDefaults
 	FName BlockName;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bIsSolid;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TMap<FName, int> TexturesIndices;
 };

@@ -23,6 +23,8 @@ public:
 protected:	
 	EState State;
 
+	UMaterial* BlocksMaterial;
+	
 	void LoadPlanesZPositive();
 	void LoadPlanesXPositive();
 	void LoadPlanesYPositive();

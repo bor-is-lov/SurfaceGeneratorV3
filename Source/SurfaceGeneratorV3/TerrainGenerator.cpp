@@ -28,8 +28,15 @@ void FTerrainGenerator::GenerateChunk(AChunk* Chunk) const
 		for(int x = 0; x < 16; x++)
 			for(int y = 0; y < 16; y++)
 				for(int z = 0; z < 16; z++)
-					if(ChunkLocation.Z * 16 + z <= (*HeightData)[x * 16 + y])
+					if(ChunkLocation.Z * 16 + z <= (*HeightData)[x * 16 + y] - 5)
 						Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 1);
+					else if(ChunkLocation.Z * 16 + z <= (*HeightData)[x * 16 + y] - 1)
+						Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 2);
+					else if(ChunkLocation.Z * 16 + z == (*HeightData)[x * 16 + y])
+						if((*HeightData)[x * 16 + y] >= 0)
+							Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 3);
+						else
+							Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 2);
 					else
 						Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 0);
 	}
@@ -45,8 +52,15 @@ void FTerrainGenerator::GenerateChunk(AChunk* Chunk) const
 					6);
 				(*HeightData)[x * 16 + y] = Height;
 				for(int z = 0; z < 16; z++)
-					if (ChunkLocation.Z * 16 + z <= Height)
+					if (ChunkLocation.Z * 16 + z <= Height - 5)
 						Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 1);
+					else if (ChunkLocation.Z * 16 + z <= Height - 1)
+						Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 2);
+					else if (ChunkLocation.Z * 16 + z == Height)
+						if(Height >= 0)
+							Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 3);
+						else
+							Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 2);
 					else
 						Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 0);
 			}

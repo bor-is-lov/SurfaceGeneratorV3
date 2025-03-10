@@ -27,14 +27,11 @@ void AChunk::LoadPlanesZPositive()
 	for(int z = 0; z < 16; z++)
 	{
 		for(int i = 0; i < 256; i++)
-			ShouldAddPlane[i] = PlaneAdded[i] = false;
+			PlaneAdded[i] = false;
 		for(int x = 0; x < 16; x++)
 			for(int y = 0; y < 16; y++)
-			{
-				if(BlocksData[LocationToBlockIndex(x, y, z)].GetDefaults(GetWorld())->bIsSolid &&
-					(z == 15 || !BlocksData[LocationToBlockIndex(x, y, z + 1)].GetDefaults(GetWorld())->bIsSolid))
-					ShouldAddPlane[x * 16 + y] = true;
-			}
+				ShouldAddPlane[x * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
+					z == 15 ? nullptr : &BlocksData[LocationToBlockIndex(x, y, z + 1)]);
 		
 		for(int i = 0; i < 256; i++)
 		{
@@ -44,9 +41,11 @@ void AChunk::LoadPlanesZPositive()
 				const int y1 = i % 16;
 				int x2 = x1;
 				int y2 = y1;
+				const int TextureIndex = BlocksData[LocationToBlockIndex(x1, y1, z)].GetTextureIndex(GetWorld(), EFaceDirection::ZPositive);
 				
 				for(; x2 < 16; x2++)
-					if (!(ShouldAddPlane[x2 * 16 + y1] && !PlaneAdded[x2 * 16 + y1]))
+					if (!(ShouldAddPlane[x2 * 16 + y1] && !PlaneAdded[x2 * 16 + y1]
+						&& BlocksData[LocationToBlockIndex(x2, y1, z)].GetTextureIndex(GetWorld(), EFaceDirection::ZPositive) == TextureIndex))
 						break;
 				x2--;
 				
@@ -54,7 +53,8 @@ void AChunk::LoadPlanesZPositive()
 				{
 					bool ShouldAddRow = true;
 					for(int x = x1; x <= x2; x++)
-						if(!(ShouldAddPlane[x * 16 + y2] && !PlaneAdded[x * 16 + y2]))
+						if(!(ShouldAddPlane[x * 16 + y2] && !PlaneAdded[x * 16 + y2]
+							&& BlocksData[LocationToBlockIndex(x, y2, z)].GetTextureIndex(GetWorld(), EFaceDirection::ZPositive) == TextureIndex))
 							ShouldAddRow = false;
 					if(!ShouldAddRow)
 						break;
@@ -69,10 +69,17 @@ void AChunk::LoadPlanesZPositive()
 				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
 				const float ScaleX = x2 - x1 + 1.0f;
 				const float ScaleY = y2 - y1 + 1.0f;
-				Planes->AddInstance(FTransform(
+				const int InstanceIndex = Planes->AddInstance(FTransform(
 					{0, 0, 0},
 					{PosX, PosY, z * 100.0f + 100.0f},
 					{ScaleX, ScaleY, 1.0f}));
+
+				if(BlocksMaterial)
+				{
+					Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
+					Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
+					Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
+				}
 			}
 		}
 	}
@@ -88,11 +95,8 @@ void AChunk::LoadPlanesXPositive()
 			ShouldAddPlane[i] = PlaneAdded[i] = false;
 		for(int z = 0; z < 16; z++)
 			for(int y = 0; y < 16; y++)
-			{
-				if(BlocksData[LocationToBlockIndex(x, y, z)].GetDefaults(GetWorld())->bIsSolid &&
-					(x == 15 || !BlocksData[LocationToBlockIndex(x + 1, y, z)].GetDefaults(GetWorld())->bIsSolid))
-					ShouldAddPlane[z * 16 + y] = true;
-			}
+				ShouldAddPlane[z * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
+					x == 15 ? nullptr : &BlocksData[LocationToBlockIndex(x + 1, y, z)]);
 		
 		for(int i = 0; i < 256; i++)
 		{
@@ -102,9 +106,11 @@ void AChunk::LoadPlanesXPositive()
 				const int y1 = i % 16;
 				int z2 = z1;
 				int y2 = y1;
+				const int TextureIndex = BlocksData[LocationToBlockIndex(x, y1, z1)].GetTextureIndex(GetWorld(), EFaceDirection::XPositive);
 				
 				for(; z2 < 16; z2++)
-					if (!(ShouldAddPlane[z2 * 16 + y1] && !PlaneAdded[z2 * 16 + y1]))
+					if (!(ShouldAddPlane[z2 * 16 + y1] && !PlaneAdded[z2 * 16 + y1]
+						&& BlocksData[LocationToBlockIndex(x, y1, z2)].GetTextureIndex(GetWorld(), EFaceDirection::XPositive) == TextureIndex))
 						break;
 				z2--;
 				
@@ -112,7 +118,8 @@ void AChunk::LoadPlanesXPositive()
 				{
 					bool ShouldAddRow = true;
 					for(int z = z1; z <= z2; z++)
-						if(!(ShouldAddPlane[z * 16 + y2] && !PlaneAdded[z * 16 + y2]))
+						if(!(ShouldAddPlane[z * 16 + y2] && !PlaneAdded[z * 16 + y2]
+							&& BlocksData[LocationToBlockIndex(x, y2, z)].GetTextureIndex(GetWorld(), EFaceDirection::XPositive) == TextureIndex))
 							ShouldAddRow = false;
 					if(!ShouldAddRow)
 						break;
@@ -127,10 +134,17 @@ void AChunk::LoadPlanesXPositive()
 				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
 				const float ScaleY = z2 - z1 + 1.0f;
 				const float ScaleX = y2 - y1 + 1.0f;
-				Planes->AddInstance(FTransform(
+				const int InstanceIndex = Planes->AddInstance(FTransform(
 					{0, -90, 90},
 					{x * 100.0f + 100.0f, PosY, PosZ},
 					{ScaleX, ScaleY, 1.0f}));
+
+				if(BlocksMaterial)
+				{
+					Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
+					Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
+					Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
+				}
 			}
 		}
 	}
@@ -146,11 +160,8 @@ void AChunk::LoadPlanesYPositive()
 			ShouldAddPlane[i] = PlaneAdded[i] = false;
 		for(int x = 0; x < 16; x++)
 			for(int z = 0; z < 16; z++)
-			{
-				if(BlocksData[LocationToBlockIndex(x, y, z)].GetDefaults(GetWorld())->bIsSolid &&
-					(y == 15 || !BlocksData[LocationToBlockIndex(x, y + 1, z)].GetDefaults(GetWorld())->bIsSolid))
-					ShouldAddPlane[x * 16 + z] = true;
-			}
+				ShouldAddPlane[x * 16 + z] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
+					y == 15 ? nullptr : &BlocksData[LocationToBlockIndex(x, y + 1, z)]);
 		
 		for(int i = 0; i < 256; i++)
 		{
@@ -160,9 +171,11 @@ void AChunk::LoadPlanesYPositive()
 				const int z1 = i % 16;
 				int x2 = x1;
 				int z2 = z1;
+				const int TextureIndex = BlocksData[LocationToBlockIndex(x1, y, z2)].GetTextureIndex(GetWorld(), EFaceDirection::YPositive);
 				
 				for(; x2 < 16; x2++)
-					if (!(ShouldAddPlane[x2 * 16 + z1] && !PlaneAdded[x2 * 16 + z1]))
+					if (!(ShouldAddPlane[x2 * 16 + z1] && !PlaneAdded[x2 * 16 + z1]
+						&& BlocksData[LocationToBlockIndex(x2, y, z1)].GetTextureIndex(GetWorld(), EFaceDirection::YPositive) == TextureIndex))
 						break;
 				x2--;
 				
@@ -170,7 +183,8 @@ void AChunk::LoadPlanesYPositive()
 				{
 					bool ShouldAddRow = true;
 					for(int x = x1; x <= x2; x++)
-						if(!(ShouldAddPlane[x * 16 + z2] && !PlaneAdded[x * 16 + z2]))
+						if(!(ShouldAddPlane[x * 16 + z2] && !PlaneAdded[x * 16 + z2]
+							&& BlocksData[LocationToBlockIndex(x, y, z2)].GetTextureIndex(GetWorld(), EFaceDirection::YPositive) == TextureIndex))
 							ShouldAddRow = false;
 					if(!ShouldAddRow)
 						break;
@@ -185,10 +199,17 @@ void AChunk::LoadPlanesYPositive()
 				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
 				const float ScaleX = x2 - x1 + 1.0f;
 				const float ScaleY = z2 - z1 + 1.0f;
-				Planes->AddInstance(FTransform(
+				const int InstanceIndex = Planes->AddInstance(FTransform(
 					{0, 0, 90},
 					{PosX, y * 100.0f + 100.0f, PosZ},
 					{ScaleX, ScaleY, 1.0f}));
+
+				if(BlocksMaterial)
+				{
+					Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
+					Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
+					Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
+				}
 			}
 		}
 	}
@@ -204,11 +225,8 @@ void AChunk::LoadPlanesZNegative()
 			ShouldAddPlane[i] = PlaneAdded[i] = false;
 		for(int x = 0; x < 16; x++)
 			for(int y = 0; y < 16; y++)
-			{
-				if(BlocksData[LocationToBlockIndex(x, y, z)].GetDefaults(GetWorld())->bIsSolid &&
-					(z == 0 || !BlocksData[LocationToBlockIndex(x, y, z - 1)].GetDefaults(GetWorld())->bIsSolid))
-					ShouldAddPlane[x * 16 + y] = true;
-			}
+				ShouldAddPlane[x * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
+					z == 0 ? nullptr : &BlocksData[LocationToBlockIndex(x, y, z - 1)]);
 		
 		for(int i = 0; i < 256; i++)
 		{
@@ -218,9 +236,11 @@ void AChunk::LoadPlanesZNegative()
 				const int y1 = i % 16;
 				int x2 = x1;
 				int y2 = y1;
+				const int TextureIndex = BlocksData[LocationToBlockIndex(x1, y1, z)].GetTextureIndex(GetWorld(), EFaceDirection::ZNegative);
 				
 				for(; x2 < 16; x2++)
-					if (!(ShouldAddPlane[x2 * 16 + y1] && !PlaneAdded[x2 * 16 + y1]))
+					if (!(ShouldAddPlane[x2 * 16 + y1] && !PlaneAdded[x2 * 16 + y1]
+						&& BlocksData[LocationToBlockIndex(x2, y1, z)].GetTextureIndex(GetWorld(), EFaceDirection::ZNegative) == TextureIndex))
 						break;
 				x2--;
 				
@@ -228,7 +248,8 @@ void AChunk::LoadPlanesZNegative()
 				{
 					bool ShouldAddRow = true;
 					for(int x = x1; x <= x2; x++)
-						if(!(ShouldAddPlane[x * 16 + y2] && !PlaneAdded[x * 16 + y2]))
+						if(!(ShouldAddPlane[x * 16 + y2] && !PlaneAdded[x * 16 + y2]
+							&& BlocksData[LocationToBlockIndex(x, y2, z)].GetTextureIndex(GetWorld(), EFaceDirection::ZNegative) == TextureIndex))
 							ShouldAddRow = false;
 					if(!ShouldAddRow)
 						break;
@@ -243,10 +264,17 @@ void AChunk::LoadPlanesZNegative()
 				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
 				const float ScaleX = x2 - x1 + 1.0f;
 				const float ScaleY = y2 - y1 + 1.0f;
-				Planes->AddInstance(FTransform(
+				const int InstanceIndex = Planes->AddInstance(FTransform(
 					{180, 0, 0},
 					{PosX, PosY, z * 100.0f},
 					{ScaleX, ScaleY, 1.0f}));
+				
+				if(BlocksMaterial)
+				{
+					Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
+					Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
+					Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
+				}
 			}
 		}
 	}
@@ -262,11 +290,8 @@ void AChunk::LoadPlanesXNegative()
 			ShouldAddPlane[i] = PlaneAdded[i] = false;
 		for(int z = 0; z < 16; z++)
 			for(int y = 0; y < 16; y++)
-			{
-				if(BlocksData[LocationToBlockIndex(x, y, z)].GetDefaults(GetWorld())->bIsSolid &&
-					(x == 0 || !BlocksData[LocationToBlockIndex(x - 1, y, z)].GetDefaults(GetWorld())->bIsSolid))
-					ShouldAddPlane[z * 16 + y] = true;
-			}
+				ShouldAddPlane[z * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
+					x == 0 ? nullptr : &BlocksData[LocationToBlockIndex(x - 1, y, z)]);
 		
 		for(int i = 0; i < 256; i++)
 		{
@@ -276,9 +301,11 @@ void AChunk::LoadPlanesXNegative()
 				const int y1 = i % 16;
 				int z2 = z1;
 				int y2 = y1;
+				const int TextureIndex = BlocksData[LocationToBlockIndex(x, y1, z1)].GetTextureIndex(GetWorld(), EFaceDirection::XNegative);
 				
 				for(; z2 < 16; z2++)
-					if (!(ShouldAddPlane[z2 * 16 + y1] && !PlaneAdded[z2 * 16 + y1]))
+					if (!(ShouldAddPlane[z2 * 16 + y1] && !PlaneAdded[z2 * 16 + y1]
+						&& BlocksData[LocationToBlockIndex(x, y1, z2)].GetTextureIndex(GetWorld(), EFaceDirection::XNegative) == TextureIndex))
 						break;
 				z2--;
 				
@@ -286,7 +313,8 @@ void AChunk::LoadPlanesXNegative()
 				{
 					bool ShouldAddRow = true;
 					for(int z = z1; z <= z2; z++)
-						if(!(ShouldAddPlane[z * 16 + y2] && !PlaneAdded[z * 16 + y2]))
+						if(!(ShouldAddPlane[z * 16 + y2] && !PlaneAdded[z * 16 + y2]
+							&& BlocksData[LocationToBlockIndex(x, y2, z)].GetTextureIndex(GetWorld(), EFaceDirection::XNegative) == TextureIndex))
 							ShouldAddRow = false;
 					if(!ShouldAddRow)
 						break;
@@ -301,10 +329,17 @@ void AChunk::LoadPlanesXNegative()
 				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
 				const float ScaleY = z2 - z1 + 1.0f;
 				const float ScaleX = y2 - y1 + 1.0f;
-				Planes->AddInstance(FTransform(
+				const int InstanceIndex = Planes->AddInstance(FTransform(
 					{0, 90, 90},
 					{x * 100.0f, PosY, PosZ},
 					{ScaleX, ScaleY, 1.0f}));
+				
+				if(BlocksMaterial)
+				{
+					Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
+					Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
+					Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
+				}
 			}
 		}
 	}
@@ -320,11 +355,8 @@ void AChunk::LoadPlanesYNegative()
 			ShouldAddPlane[i] = PlaneAdded[i] = false;
 		for(int x = 0; x < 16; x++)
 			for(int z = 0; z < 16; z++)
-			{
-				if(BlocksData[LocationToBlockIndex(x, y, z)].GetDefaults(GetWorld())->bIsSolid &&
-					(y == 0 || !BlocksData[LocationToBlockIndex(x, y - 1, z)].GetDefaults(GetWorld())->bIsSolid))
-					ShouldAddPlane[x * 16 + z] = true;
-			}
+				ShouldAddPlane[x * 16 + z] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
+					y == 0 ? nullptr : &BlocksData[LocationToBlockIndex(x, y - 1, z)]);
 		
 		for(int i = 0; i < 256; i++)
 		{
@@ -334,9 +366,11 @@ void AChunk::LoadPlanesYNegative()
 				const int z1 = i % 16;
 				int x2 = x1;
 				int z2 = z1;
+				const int TextureIndex = BlocksData[LocationToBlockIndex(x1, y, z2)].GetTextureIndex(GetWorld(), EFaceDirection::YNegative);
 				
 				for(; x2 < 16; x2++)
-					if (!(ShouldAddPlane[x2 * 16 + z1] && !PlaneAdded[x2 * 16 + z1]))
+					if (!(ShouldAddPlane[x2 * 16 + z1] && !PlaneAdded[x2 * 16 + z1]
+						&& BlocksData[LocationToBlockIndex(x2, y, z1)].GetTextureIndex(GetWorld(), EFaceDirection::YNegative) == TextureIndex))
 						break;
 				x2--;
 				
@@ -344,7 +378,8 @@ void AChunk::LoadPlanesYNegative()
 				{
 					bool ShouldAddRow = true;
 					for(int x = x1; x <= x2; x++)
-						if(!(ShouldAddPlane[x * 16 + z2] && !PlaneAdded[x * 16 + z2]))
+						if(!(ShouldAddPlane[x * 16 + z2] && !PlaneAdded[x * 16 + z2]
+							&& BlocksData[LocationToBlockIndex(x, y, z2)].GetTextureIndex(GetWorld(), EFaceDirection::YNegative) == TextureIndex))
 							ShouldAddRow = false;
 					if(!ShouldAddRow)
 						break;
@@ -359,10 +394,17 @@ void AChunk::LoadPlanesYNegative()
 				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
 				const float ScaleX = x2 - x1 + 1.0f;
 				const float ScaleY = z2 - z1 + 1.0f;
-				Planes->AddInstance(FTransform(
-					{0, 0, -90},
+				const int InstanceIndex = Planes->AddInstance(FTransform(
+					{0, 180, 90},
 					{PosX, y * 100.0f, PosZ},
 					{ScaleX, ScaleY, 1.0f}));
+				
+				if(BlocksMaterial)
+				{
+					Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
+					Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
+					Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
+				}
 			}
 		}
 	}
@@ -380,16 +422,16 @@ AChunk::AChunk()
 	Border->SetBoxExtent(FVector(800, 800, 800), false);
 	Border->SetRelativeLocation(FVector(800, 800, 800));
 	Border->SetGenerateOverlapEvents(false);
-	Border->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Border->SetComponentTickEnabled(false);
 
-	Planes = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>("Planes2");
+	Planes = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>("Planes");
 	Planes->SetupAttachment(RootComponent);
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Engine/BasicShapes/Plane.Plane"));
 	if(MeshAsset.Succeeded())
 		Planes->SetStaticMesh(MeshAsset.Object);
 	Planes->SetGenerateOverlapEvents(false);
 	Planes->SetComponentTickEnabled(false);
+	Planes->NumCustomDataFloats = 3;
 	
 	BlocksData.SetNum(4096);
 }
@@ -400,6 +442,9 @@ void AChunk::BeginPlay()
 	
 	SetActorTickEnabled(false);
 	SetActorHiddenInGame(true);
+	BlocksMaterial = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->BlocksMaterial;
+	if(BlocksMaterial)
+		Planes->SetMaterial(0, BlocksMaterial);
 	Border->SetCollisionResponseToAllChannels(ECR_Block);
 	Border->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
