@@ -31,7 +31,20 @@ protected:
 	void LoadPlanesZNegative();
 	void LoadPlanesXNegative();
 	void LoadPlanesYNegative();
+
+	void LoadPlanesZPositiveTouching() const;
+	void LoadPlanesXPositiveTouching() const;
+	void LoadPlanesYPositiveTouching() const;
+	void LoadPlanesZNegativeTouching() const;
+	void LoadPlanesXNegativeTouching() const;
+	void LoadPlanesYNegativeTouching() const;
 	
+	void UnloadPlanesZPositiveTouching() const;
+	void UnloadPlanesXPositiveTouching() const;
+	void UnloadPlanesYPositiveTouching() const;
+	void UnloadPlanesZNegativeTouching() const;
+	void UnloadPlanesXNegativeTouching() const;
+	void UnloadPlanesYNegativeTouching() const;
 public:
 	AChunk();
 	virtual void BeginPlay() override;

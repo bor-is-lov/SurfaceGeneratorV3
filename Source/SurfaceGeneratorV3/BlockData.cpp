@@ -74,7 +74,7 @@ bool FBlockData::ShouldAddFace(const UWorld* World, const FBlockData* TouchingBl
 {
 	const FBlockDefaults* Defaults = GetDefaults(World);
 	const FBlockDefaults* TouchingDefaults = TouchingBlock ? GetDefaults(World, TouchingBlock->DefaultsIndex) : nullptr;
-	if(Defaults->Shape == EShape::Cube && (!TouchingDefaults || !TouchingDefaults->bIsSolid))
+	if(Defaults->Shape == EShape::Cube && (TouchingDefaults && !TouchingDefaults->bIsSolid))
 		return true;
 	return false;
 }
