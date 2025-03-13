@@ -7,955 +7,361 @@
 
 void AChunk::LoadPlanes()
 {
-	LoadPlanesZPositive();
-	LoadPlanesXPositive();
-	LoadPlanesYPositive();
-	LoadPlanesZNegative();
-	LoadPlanesXNegative();
-	LoadPlanesYNegative();
+	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
+	AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
+	for(int x = 0; x < 16; x++)
+		LoadPlanesAtIndex(EFaceDirection::XPositive, x, Touching);
+	if(Touching)
+		Touching->LoadPlanesAtIndex(EFaceDirection::XNegative, 0, this);
+	
+	Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
+	for(int y = 0; y < 16; y++)
+		LoadPlanesAtIndex(EFaceDirection::YPositive, y, Touching);
+	if(Touching)
+		Touching->LoadPlanesAtIndex(EFaceDirection::YNegative, 0, this);
+	
+	Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
+	for(int z = 0; z < 16; z++)
+		LoadPlanesAtIndex(EFaceDirection::ZPositive, z, Touching);
+	if(Touching)
+		Touching->LoadPlanesAtIndex(EFaceDirection::ZNegative, 0, this);
+	
+	Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
+	for(int x = 0; x < 16; x++)
+		LoadPlanesAtIndex(EFaceDirection::XNegative, x, Touching);
+	if(Touching)
+		Touching->LoadPlanesAtIndex(EFaceDirection::XPositive, 15, this);
+	
+	Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
+	for(int y = 0; y < 16; y++)
+		LoadPlanesAtIndex(EFaceDirection::YNegative, y, Touching);
+	if(Touching)
+		Touching->LoadPlanesAtIndex(EFaceDirection::YPositive, 15, this);
+	
+	Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
+	for(int z = 0; z < 16; z++)
+		LoadPlanesAtIndex(EFaceDirection::ZNegative, z, Touching);
+	if(Touching)
+		Touching->LoadPlanesAtIndex(EFaceDirection::ZPositive, 15, this);
 
-	LoadPlanesZPositiveTouching();
-	LoadPlanesXPositiveTouching();
-	LoadPlanesYPositiveTouching();
-	LoadPlanesZNegativeTouching();
-	LoadPlanesXNegativeTouching();
-	LoadPlanesYNegativeTouching();
 }
 
 void AChunk::UnloadPlanes()
 {
 	Planes->ClearInstances();
 	
-	UnloadPlanesZPositiveTouching();
-	UnloadPlanesXPositiveTouching();
-	UnloadPlanesYPositiveTouching();
-	UnloadPlanesZNegativeTouching();
-	UnloadPlanesXNegativeTouching();
-	UnloadPlanesYNegativeTouching();
+	UnloadPlanesTouching(EFaceDirection::XPositive);
+	UnloadPlanesTouching(EFaceDirection::YPositive);
+	UnloadPlanesTouching(EFaceDirection::ZPositive);
+	UnloadPlanesTouching(EFaceDirection::XNegative);
+	UnloadPlanesTouching(EFaceDirection::YNegative);
+	UnloadPlanesTouching(EFaceDirection::ZNegative);
 }
 
-void AChunk::LoadPlanesZPositive()
+void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex, const AChunk* Touching)
 {
 	bool ShouldAddPlane[256] = {false};
 	bool PlaneAdded[256] = {false};
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
-	for(int z = 0; z < 16; z++)
-	{
-		for(int i = 0; i < 256; i++)
-			PlaneAdded[i] = false;
-		for(int x = 0; x < 16; x++)
-			for(int y = 0; y < 16; y++)
-				if(z == 15)
-					if(Touching)
-						ShouldAddPlane[x * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-							&Touching->BlocksData[LocationToBlockIndex(x, y, 0)]);
-					else
-						ShouldAddPlane[x * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-							nullptr);
-				else
-					ShouldAddPlane[x * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-						&BlocksData[LocationToBlockIndex(x, y, z + 1)]);
-		
-		for(int i = 0; i < 256; i++)
-		{
-			if(ShouldAddPlane[i] && !PlaneAdded[i])
-			{
-				const int x1 = i / 16;
-				const int y1 = i % 16;
-				int x2 = x1;
-				int y2 = y1;
-				const int TextureIndex = BlocksData[LocationToBlockIndex(x1, y1, z)].GetTextureIndex(GetWorld(), EFaceDirection::ZPositive);
-				
-				for(; x2 < 16; x2++)
-					if (!(ShouldAddPlane[x2 * 16 + y1] && !PlaneAdded[x2 * 16 + y1]
-						&& BlocksData[LocationToBlockIndex(x2, y1, z)].GetTextureIndex(GetWorld(), EFaceDirection::ZPositive) == TextureIndex))
-						break;
-				x2--;
-				
-				for(; y2 < 16; y2++)
-				{
-					bool ShouldAddRow = true;
-					for(int x = x1; x <= x2; x++)
-						if(!(ShouldAddPlane[x * 16 + y2] && !PlaneAdded[x * 16 + y2]
-							&& BlocksData[LocationToBlockIndex(x, y2, z)].GetTextureIndex(GetWorld(), EFaceDirection::ZPositive) == TextureIndex))
-							ShouldAddRow = false;
-					if(!ShouldAddRow)
-						break;
-				}
-				y2--;
-				
-				for(int x = x1; x <= x2; x++)
-					for(int y = y1; y <= y2; y++)
-						PlaneAdded[x * 16 + y] = true;
-
-				const float PosX = (x1 + x2) / 2.0f * 100.0f + 50.0f;
-				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
-				const float ScaleX = x2 - x1 + 1.0f;
-				const float ScaleY = y2 - y1 + 1.0f;
-				const int InstanceIndex = Planes->AddInstance(FTransform(
-					{0, 0, 0},
-					{PosX, PosY, z * 100.0f + 100.0f},
-					{ScaleX, ScaleY, 1.0f}));
-
-				if(BlocksMaterial)
-				{
-					Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-					Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-					Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
-				}
-			}
-		}
-	}
-}
-
-void AChunk::LoadPlanesXPositive()
-{
-	bool ShouldAddPlane[256] = {false};
-	bool PlaneAdded[256] = {false};
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
-	for(int x = 0; x < 16; x++)
-	{
-		for(int i = 0; i < 256; i++)
-			PlaneAdded[i] = false;
-		for(int z = 0; z < 16; z++)
-			for(int y = 0; y < 16; y++)
-				if(x == 15)
-					if(Touching)
-						ShouldAddPlane[z * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-							&Touching->BlocksData[LocationToBlockIndex(0, y, z)]);
-					else
-						ShouldAddPlane[z * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-							nullptr);
-				else
-					ShouldAddPlane[z * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-						&BlocksData[LocationToBlockIndex(x + 1, y, z)]);
-		
-		for(int i = 0; i < 256; i++)
-		{
-			if(ShouldAddPlane[i] && !PlaneAdded[i])
-			{
-				const int z1 = i / 16;
-				const int y1 = i % 16;
-				int z2 = z1;
-				int y2 = y1;
-				const int TextureIndex = BlocksData[LocationToBlockIndex(x, y1, z1)].GetTextureIndex(GetWorld(), EFaceDirection::XPositive);
-				
-				for(; z2 < 16; z2++)
-					if (!(ShouldAddPlane[z2 * 16 + y1] && !PlaneAdded[z2 * 16 + y1]
-						&& BlocksData[LocationToBlockIndex(x, y1, z2)].GetTextureIndex(GetWorld(), EFaceDirection::XPositive) == TextureIndex))
-						break;
-				z2--;
-				
-				for(; y2 < 16; y2++)
-				{
-					bool ShouldAddRow = true;
-					for(int z = z1; z <= z2; z++)
-						if(!(ShouldAddPlane[z * 16 + y2] && !PlaneAdded[z * 16 + y2]
-							&& BlocksData[LocationToBlockIndex(x, y2, z)].GetTextureIndex(GetWorld(), EFaceDirection::XPositive) == TextureIndex))
-							ShouldAddRow = false;
-					if(!ShouldAddRow)
-						break;
-				}
-				y2--;
-				
-				for(int z = z1; z <= z2; z++)
-					for(int y = y1; y <= y2; y++)
-						PlaneAdded[z * 16 + y] = true;
-
-				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
-				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
-				const float ScaleY = z2 - z1 + 1.0f;
-				const float ScaleX = y2 - y1 + 1.0f;
-				const int InstanceIndex = Planes->AddInstance(FTransform(
-					{0, -90, 90},
-					{x * 100.0f + 100.0f, PosY, PosZ},
-					{ScaleX, ScaleY, 1.0f}));
-
-				if(BlocksMaterial)
-				{
-					Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-					Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-					Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
-				}
-			}
-		}
-	}
-}
-
-void AChunk::LoadPlanesYPositive()
-{
-	bool ShouldAddPlane[256] = {false};
-	bool PlaneAdded[256] = {false};
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
-	for(int y = 0; y < 16; y++)
-	{
-		for(int i = 0; i < 256; i++)
-			PlaneAdded[i] = false;
-		for(int x = 0; x < 16; x++)
-			for(int z = 0; z < 16; z++)
-				if(y == 15)
-					if(Touching)
-						ShouldAddPlane[x * 16 + z] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-							&Touching->BlocksData[LocationToBlockIndex(x, 0, z)]);
-					else
-						ShouldAddPlane[x * 16 + z] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-							nullptr);
-				else
-					ShouldAddPlane[x * 16 + z] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-						&BlocksData[LocationToBlockIndex(x, y + 1, z)]);
-		
-		for(int i = 0; i < 256; i++)
-		{
-			if(ShouldAddPlane[i] && !PlaneAdded[i])
-			{
-				const int x1 = i / 16;
-				const int z1 = i % 16;
-				int x2 = x1;
-				int z2 = z1;
-				const int TextureIndex = BlocksData[LocationToBlockIndex(x1, y, z2)].GetTextureIndex(GetWorld(), EFaceDirection::YPositive);
-				
-				for(; x2 < 16; x2++)
-					if (!(ShouldAddPlane[x2 * 16 + z1] && !PlaneAdded[x2 * 16 + z1]
-						&& BlocksData[LocationToBlockIndex(x2, y, z1)].GetTextureIndex(GetWorld(), EFaceDirection::YPositive) == TextureIndex))
-						break;
-				x2--;
-				
-				for(; z2 < 16; z2++)
-				{
-					bool ShouldAddRow = true;
-					for(int x = x1; x <= x2; x++)
-						if(!(ShouldAddPlane[x * 16 + z2] && !PlaneAdded[x * 16 + z2]
-							&& BlocksData[LocationToBlockIndex(x, y, z2)].GetTextureIndex(GetWorld(), EFaceDirection::YPositive) == TextureIndex))
-							ShouldAddRow = false;
-					if(!ShouldAddRow)
-						break;
-				}
-				z2--;
-				
-				for(int x = x1; x <= x2; x++)
-					for(int z = z1; z <= z2; z++)
-						PlaneAdded[x * 16 + z] = true;
-
-				const float PosX = (x1 + x2) / 2.0f * 100.0f + 50.0f;
-				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
-				const float ScaleX = x2 - x1 + 1.0f;
-				const float ScaleY = z2 - z1 + 1.0f;
-				const int InstanceIndex = Planes->AddInstance(FTransform(
-					{0, 0, 90},
-					{PosX, y * 100.0f + 100.0f, PosZ},
-					{ScaleX, ScaleY, 1.0f}));
-
-				if(BlocksMaterial)
-				{
-					Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-					Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-					Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
-				}
-			}
-		}
-	}
-}
-
-void AChunk::LoadPlanesZNegative()
-{
-	bool ShouldAddPlane[256] = {false};
-	bool PlaneAdded[256] = {false};
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
-	for(int z = 0; z < 16; z++)
-	{
-		for(int i = 0; i < 256; i++)
-			PlaneAdded[i] = false;
-		for(int x = 0; x < 16; x++)
-			for(int y = 0; y < 16; y++)
-				if(z == 0)
-					if(Touching)
-						ShouldAddPlane[x * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-							&Touching->BlocksData[LocationToBlockIndex(x, y, 15)]);
-					else
-						ShouldAddPlane[x * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-							nullptr);
-				else
-					ShouldAddPlane[x * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-						&BlocksData[LocationToBlockIndex(x, y, z - 1)]);
-		
-		for(int i = 0; i < 256; i++)
-		{
-			if(ShouldAddPlane[i] && !PlaneAdded[i])
-			{
-				const int x1 = i / 16;
-				const int y1 = i % 16;
-				int x2 = x1;
-				int y2 = y1;
-				const int TextureIndex = BlocksData[LocationToBlockIndex(x1, y1, z)].GetTextureIndex(GetWorld(), EFaceDirection::ZNegative);
-				
-				for(; x2 < 16; x2++)
-					if (!(ShouldAddPlane[x2 * 16 + y1] && !PlaneAdded[x2 * 16 + y1]
-						&& BlocksData[LocationToBlockIndex(x2, y1, z)].GetTextureIndex(GetWorld(), EFaceDirection::ZNegative) == TextureIndex))
-						break;
-				x2--;
-				
-				for(; y2 < 16; y2++)
-				{
-					bool ShouldAddRow = true;
-					for(int x = x1; x <= x2; x++)
-						if(!(ShouldAddPlane[x * 16 + y2] && !PlaneAdded[x * 16 + y2]
-							&& BlocksData[LocationToBlockIndex(x, y2, z)].GetTextureIndex(GetWorld(), EFaceDirection::ZNegative) == TextureIndex))
-							ShouldAddRow = false;
-					if(!ShouldAddRow)
-						break;
-				}
-				y2--;
-				
-				for(int x = x1; x <= x2; x++)
-					for(int y = y1; y <= y2; y++)
-						PlaneAdded[x * 16 + y] = true;
-
-				const float PosX = (x1 + x2) / 2.0f * 100.0f + 50.0f;
-				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
-				const float ScaleX = x2 - x1 + 1.0f;
-				const float ScaleY = y2 - y1 + 1.0f;
-				const int InstanceIndex = Planes->AddInstance(FTransform(
-					{180, 0, 0},
-					{PosX, PosY, z * 100.0f},
-					{ScaleX, ScaleY, 1.0f}));
-				
-				if(BlocksMaterial)
-				{
-					Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-					Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-					Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
-				}
-			}
-		}
-	}
-}
-
-void AChunk::LoadPlanesXNegative()
-{
-	bool ShouldAddPlane[256] = {false};
-	bool PlaneAdded[256] = {false};
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
-	for(int x = 0; x < 16; x++)
-	{
-		for(int i = 0; i < 256; i++)
-			PlaneAdded[i] = false;
-		for(int z = 0; z < 16; z++)
-			for(int y = 0; y < 16; y++)
-				if(x == 0)
-					if(Touching)
-						ShouldAddPlane[z * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-							&Touching->BlocksData[LocationToBlockIndex(15, y, z)]);
-					else
-						ShouldAddPlane[z * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-							nullptr);
-				else
-					ShouldAddPlane[z * 16 + y] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-						&BlocksData[LocationToBlockIndex(x - 1, y, z)]);
-		
-		for(int i = 0; i < 256; i++)
-		{
-			if(ShouldAddPlane[i] && !PlaneAdded[i])
-			{
-				const int z1 = i / 16;
-				const int y1 = i % 16;
-				int z2 = z1;
-				int y2 = y1;
-				const int TextureIndex = BlocksData[LocationToBlockIndex(x, y1, z1)].GetTextureIndex(GetWorld(), EFaceDirection::XNegative);
-				
-				for(; z2 < 16; z2++)
-					if (!(ShouldAddPlane[z2 * 16 + y1] && !PlaneAdded[z2 * 16 + y1]
-						&& BlocksData[LocationToBlockIndex(x, y1, z2)].GetTextureIndex(GetWorld(), EFaceDirection::XNegative) == TextureIndex))
-						break;
-				z2--;
-				
-				for(; y2 < 16; y2++)
-				{
-					bool ShouldAddRow = true;
-					for(int z = z1; z <= z2; z++)
-						if(!(ShouldAddPlane[z * 16 + y2] && !PlaneAdded[z * 16 + y2]
-							&& BlocksData[LocationToBlockIndex(x, y2, z)].GetTextureIndex(GetWorld(), EFaceDirection::XNegative) == TextureIndex))
-							ShouldAddRow = false;
-					if(!ShouldAddRow)
-						break;
-				}
-				y2--;
-				
-				for(int z = z1; z <= z2; z++)
-					for(int y = y1; y <= y2; y++)
-						PlaneAdded[z * 16 + y] = true;
-
-				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
-				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
-				const float ScaleY = z2 - z1 + 1.0f;
-				const float ScaleX = y2 - y1 + 1.0f;
-				const int InstanceIndex = Planes->AddInstance(FTransform(
-					{0, 90, 90},
-					{x * 100.0f, PosY, PosZ},
-					{ScaleX, ScaleY, 1.0f}));
-				
-				if(BlocksMaterial)
-				{
-					Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-					Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-					Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
-				}
-			}
-		}
-	}
-}
-
-void AChunk::LoadPlanesYNegative()
-{
-	bool ShouldAddPlane[256] = {false};
-	bool PlaneAdded[256] = {false};
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
-	for(int y = 0; y < 16; y++)
-	{
-		for(int i = 0; i < 256; i++)
-			PlaneAdded[i] = false;
-		for(int x = 0; x < 16; x++)
-			for(int z = 0; z < 16; z++)
-				if(y == 0)
-					if(Touching)
-						ShouldAddPlane[x * 16 + z] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-							&Touching->BlocksData[LocationToBlockIndex(x, 15, z)]);
-					else
-						ShouldAddPlane[x * 16 + z] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-							nullptr);
-				else
-					ShouldAddPlane[x * 16 + z] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
-						&BlocksData[LocationToBlockIndex(x, y - 1, z)]);
-		
-		for(int i = 0; i < 256; i++)
-		{
-			if(ShouldAddPlane[i] && !PlaneAdded[i])
-			{
-				const int x1 = i / 16;
-				const int z1 = i % 16;
-				int x2 = x1;
-				int z2 = z1;
-				const int TextureIndex = BlocksData[LocationToBlockIndex(x1, y, z2)].GetTextureIndex(GetWorld(), EFaceDirection::YNegative);
-				
-				for(; x2 < 16; x2++)
-					if (!(ShouldAddPlane[x2 * 16 + z1] && !PlaneAdded[x2 * 16 + z1]
-						&& BlocksData[LocationToBlockIndex(x2, y, z1)].GetTextureIndex(GetWorld(), EFaceDirection::YNegative) == TextureIndex))
-						break;
-				x2--;
-				
-				for(; z2 < 16; z2++)
-				{
-					bool ShouldAddRow = true;
-					for(int x = x1; x <= x2; x++)
-						if(!(ShouldAddPlane[x * 16 + z2] && !PlaneAdded[x * 16 + z2]
-							&& BlocksData[LocationToBlockIndex(x, y, z2)].GetTextureIndex(GetWorld(), EFaceDirection::YNegative) == TextureIndex))
-							ShouldAddRow = false;
-					if(!ShouldAddRow)
-						break;
-				}
-				z2--;
-				
-				for(int x = x1; x <= x2; x++)
-					for(int z = z1; z <= z2; z++)
-						PlaneAdded[x * 16 + z] = true;
-
-				const float PosX = (x1 + x2) / 2.0f * 100.0f + 50.0f;
-				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
-				const float ScaleX = x2 - x1 + 1.0f;
-				const float ScaleY = z2 - z1 + 1.0f;
-				const int InstanceIndex = Planes->AddInstance(FTransform(
-					{0, 180, 90},
-					{PosX, y * 100.0f, PosZ},
-					{ScaleX, ScaleY, 1.0f}));
-				
-				if(BlocksMaterial)
-				{
-					Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-					Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-					Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
-				}
-			}
-		}
-	}
-}
-
-void AChunk::LoadPlanesZPositiveTouching() const
-{
-	bool ShouldAddPlane[256] = {false};
-	bool PlaneAdded[256] = {false};
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	if(AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1}))
-	{
-		for(int x = 0; x < 16; x++)
-			for(int y = 0; y < 16; y++)
-				ShouldAddPlane[x * 16 + y] = Touching->BlocksData[LocationToBlockIndex(x, y, 15)].ShouldAddFace(GetWorld(),
-					&BlocksData[LocationToBlockIndex(x, y, 0)]);
 	
-		for(int i = 0; i < 256; i++)
+	{
+		int x = 0, y = 0, z = 0;
+		int *first = nullptr, *second = nullptr, *third = nullptr;
+
+		if(FaceDir == EFaceDirection::XPositive || FaceDir == EFaceDirection::XNegative)
 		{
-			if(ShouldAddPlane[i] && !PlaneAdded[i])
+			first = &x;
+			second = &z;
+			third = &y;
+		}
+		else if(FaceDir == EFaceDirection::YPositive || FaceDir == EFaceDirection::YNegative)
+		{
+			first = &y;
+			second = &x;
+			third = &z;
+		}
+		else if(FaceDir == EFaceDirection::ZPositive || FaceDir == EFaceDirection::ZNegative)
+		{
+			first = &z;
+			second = &x;
+			third = &y;
+		}
+		else
+			__debugbreak();
+		*first = FaceIndex;
+	
+		for(; *second < 16; (*second)++)
+		{
+			*third = 0;
+			for(; *third < 16; (*third)++)
+				if(FaceDir == EFaceDirection::XPositive || FaceDir == EFaceDirection::YPositive || FaceDir == EFaceDirection::ZPositive)
+					if(*first == 15)
+						if(Touching)
+						{
+							const int tempX = x, tempY = y, tempZ = z;
+							*first = 0;
+							ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].ShouldAddFace(GetWorld(),
+								&Touching->BlocksData[LocationToBlockIndex(x, y, z)]);
+							*first = FaceIndex;
+						}
+						else
+							ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
+								nullptr);
+						else
+						{
+							const int tempX = x, tempY = y, tempZ = z;
+							(*first)++;
+							ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].ShouldAddFace(GetWorld(),
+								&BlocksData[LocationToBlockIndex(x, y, z)]);
+							(*first)--;
+						}
+			else
+				if(*first == 0)
+					if(Touching)
+					{
+						const int tempX = x, tempY = y, tempZ = z;
+						*first = 15;
+						ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].ShouldAddFace(GetWorld(),
+							&Touching->BlocksData[LocationToBlockIndex(x, y, z)]);
+						*first = FaceIndex;
+					}
+					else
+						ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(GetWorld(),
+							nullptr);
+					else
+					{
+						const int tempX = x, tempY = y, tempZ = z;
+						(*first)--;
+						ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].ShouldAddFace(GetWorld(),
+							&BlocksData[LocationToBlockIndex(x, y, z)]);
+						(*first)++;
+					}
+		}
+	}
+	
+	int first = FaceIndex;
+	for(int i = 0; i < 256; i++)
+	{
+		if(ShouldAddPlane[i] && !PlaneAdded[i])
+		{
+			int second1 = i / 16;
+			int third1 = i % 16;
+			int second2 = second1;
+			int third2 = third1;
+
+			int *x1, *x2, *y1, *y2, *z1, *z2;
+			if(FaceDir == EFaceDirection::XPositive || FaceDir == EFaceDirection::XNegative)
 			{
-				const int x1 = i / 16;
-				const int y1 = i % 16;
-				int x2 = x1;
-				int y2 = y1;
-				const int TextureIndex = Touching->BlocksData[LocationToBlockIndex(x1, y1, 15)].GetTextureIndex(GetWorld(), EFaceDirection::ZPositive);
+				x1 = &first;
+				x2 = &first;
+				y1 = &third1;
+				y2 = &third2;
+				z1 = &second1;
+				z2 = &second2;
+			}
+			else if(FaceDir == EFaceDirection::YPositive || FaceDir == EFaceDirection::YNegative)
+			{
+				x1 = &second1;
+				x2 = &second2;
+				y1 = &first;
+				y2 = &first;
+				z1 = &third1;
+				z2 = &third2;
+			}
+			else
+			{
+				x1 = &second1;
+				x2 = &second2;
+				y1 = &third1;
+				y2 = &third2;
+				z1 = &first;
+				z2 = &first;
+			}
+			const int TextureIndex = BlocksData[LocationToBlockIndex(*x1, *y1, *z1)].GetTextureIndex(GetWorld(), FaceDir);
 			
-				for(; x2 < 16; x2++)
-					if (!(ShouldAddPlane[x2 * 16 + y1] && !PlaneAdded[x2 * 16 + y1]
-						&& Touching->BlocksData[LocationToBlockIndex(x2, y1, 15)].GetTextureIndex(GetWorld(), EFaceDirection::ZPositive) == TextureIndex))
-						break;
-				x2--;
+			for(; second2 < 16; second2++)
+			{
+				int x, y, z;
+				if(FaceDir == EFaceDirection::XPositive || FaceDir == EFaceDirection::XNegative)
+				{
+					x = *x1;
+					y = *y1;
+					z = *z2;
+				}
+				else
+				{
+					x = *x2;
+					y = *y1;
+					z = *z1;
+				}
+				if (!(ShouldAddPlane[second2 * 16 + third1] && !PlaneAdded[second2 * 16 + third1]
+						&& BlocksData[LocationToBlockIndex(x, y, z)].GetTextureIndex(GetWorld(), FaceDir) == TextureIndex))
+					break;
+			}
+			second2--;
 			
-				for(; y2 < 16; y2++)
+			for(; third2 < 16; third2++)
+			{
+				bool ShouldAddRow = true;
+				int x, y, z;
+				for(int secondIter = second1; secondIter <= second2; secondIter++)
 				{
-					bool ShouldAddRow = true;
-					for(int x = x1; x <= x2; x++)
-						if(!(ShouldAddPlane[x * 16 + y2] && !PlaneAdded[x * 16 + y2]
-							&& Touching->BlocksData[LocationToBlockIndex(x, y2, 15)].GetTextureIndex(GetWorld(), EFaceDirection::ZPositive) == TextureIndex))
-							ShouldAddRow = false;
-					if(!ShouldAddRow)
-						break;
+					if(FaceDir == EFaceDirection::XPositive || FaceDir == EFaceDirection::XNegative)
+					{
+						x = *x1;
+						y = *y2;
+						z = secondIter;
+					}
+					else if(FaceDir == EFaceDirection::YPositive || FaceDir == EFaceDirection::YNegative)
+					{
+						x = secondIter;
+						y = *y1;
+						z = *z2;
+					}
+					else
+					{
+						x = secondIter;
+						y = *y2;
+						z = *z1;
+					}
+					if(!(ShouldAddPlane[secondIter * 16 + third2] && !PlaneAdded[secondIter * 16 + third2]
+						&& BlocksData[LocationToBlockIndex(x, y, z)].GetTextureIndex(GetWorld(), FaceDir) == TextureIndex))
+						ShouldAddRow = false;
 				}
-				y2--;
+				if(!ShouldAddRow)
+					break;
+			}
+			third2--;
 			
-				for(int x = x1; x <= x2; x++)
-					for(int y = y1; y <= y2; y++)
-						PlaneAdded[x * 16 + y] = true;
+			for(int secondIter = second1; secondIter <= second2; secondIter++)
+				for(int thirdIter = third1; thirdIter <= third2; thirdIter++)
+					PlaneAdded[secondIter * 16 + thirdIter] = true;
 
-				const float PosX = (x1 + x2) / 2.0f * 100.0f + 50.0f;
-				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
-				const float ScaleX = x2 - x1 + 1.0f;
-				const float ScaleY = y2 - y1 + 1.0f;
-				const int InstanceIndex = Touching->Planes->AddInstance(FTransform(
-					{0, 0, 0},
-					{PosX, PosY, 1600.0f},
-					{ScaleX, ScaleY, 1.0f}));
-
-				if(BlocksMaterial)
-				{
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
-				}
-			}
-		}
-	}
-}
-
-void AChunk::LoadPlanesXPositiveTouching() const
-{
-	bool ShouldAddPlane[256] = {false};
-	bool PlaneAdded[256] = {false};
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	if(AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z}))
-	{
-		for(int z = 0; z < 16; z++)
-			for(int y = 0; y < 16; y++)
-				ShouldAddPlane[z * 16 + y] = Touching->BlocksData[LocationToBlockIndex(15, y, z)].ShouldAddFace(GetWorld(),
-					&BlocksData[LocationToBlockIndex(0, y, z)]);
-		
-		for(int i = 0; i < 256; i++)
-		{
-			if(ShouldAddPlane[i] && !PlaneAdded[i])
+			const float PosSecond = (second1 + second2) / 2.0f * 100.0f + 50.0f;
+			const float PosThird = (third1 + third2) / 2.0f * 100.0f + 50.0f;
+			float ScaleX = second2 - second1 + 1.0f;
+			float ScaleY = third2 - third1 + 1.0f;
+			FTransform Transform;
+			switch(FaceDir)
 			{
-				const int z1 = i / 16;
-				const int y1 = i % 16;
-				int z2 = z1;
-				int y2 = y1;
-				const int TextureIndex = Touching->BlocksData[LocationToBlockIndex(15, y1, z1)].GetTextureIndex(GetWorld(), EFaceDirection::XPositive);
-				
-				for(; z2 < 16; z2++)
-					if (!(ShouldAddPlane[z2 * 16 + y1] && !PlaneAdded[z2 * 16 + y1]
-						&& Touching->BlocksData[LocationToBlockIndex(15, y1, z2)].GetTextureIndex(GetWorld(), EFaceDirection::XPositive) == TextureIndex))
-						break;
-				z2--;
-				
-				for(; y2 < 16; y2++)
+			case EFaceDirection::XPositive:
 				{
-					bool ShouldAddRow = true;
-					for(int z = z1; z <= z2; z++)
-						if(!(ShouldAddPlane[z * 16 + y2] && !PlaneAdded[z * 16 + y2]
-							&& Touching->BlocksData[LocationToBlockIndex(15, y2, z)].GetTextureIndex(GetWorld(), EFaceDirection::XPositive) == TextureIndex))
-							ShouldAddRow = false;
-					if(!ShouldAddRow)
-						break;
+					const float temp = ScaleX;
+					ScaleX = ScaleY;
+					ScaleY = temp;
+					Transform =
+						{{0, -90, 90},
+						{FaceIndex * 100.0f + 100.0f, PosThird, PosSecond},
+						{ScaleX, ScaleY, 1.0f}};
+					break;
 				}
-				y2--;
-				
-				for(int z = z1; z <= z2; z++)
-					for(int y = y1; y <= y2; y++)
-						PlaneAdded[z * 16 + y] = true;
-
-				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
-				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
-				const float ScaleY = z2 - z1 + 1.0f;
-				const float ScaleX = y2 - y1 + 1.0f;
-				const int InstanceIndex = Touching->Planes->AddInstance(FTransform(
-					{0, -90, 90},
-					{1600.0f, PosY, PosZ},
-					{ScaleX, ScaleY, 1.0f}));
-
-				if(BlocksMaterial)
+			case EFaceDirection::XNegative:
 				{
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
+					const float temp = ScaleX;
+					ScaleX = ScaleY;
+					ScaleY = temp;
+					Transform =
+						{{0, 90, 90},
+						{FaceIndex * 100.0f, PosThird, PosSecond},
+						{ScaleX, ScaleY, 1.0f}};
+					break;
 				}
+			case EFaceDirection::YPositive:
+				Transform =
+					{{0, 0, 90},
+					{PosSecond, FaceIndex * 100.0f + 100.0f, PosThird},
+					{ScaleX, ScaleY, 1.0f}};
+				break;
+			case EFaceDirection::YNegative:
+				Transform =
+					{{0, 180, 90},
+					{PosSecond, FaceIndex * 100.0f, PosThird},
+					{ScaleX, ScaleY, 1.0f}};
+				break;
+			case EFaceDirection::ZPositive:
+				Transform =
+					{{0, 0, 0},
+					{PosSecond, PosThird, FaceIndex * 100.0f + 100.0f},
+					{ScaleX, ScaleY, 1.0f}};
+				break;
+			case EFaceDirection::ZNegative:
+				Transform =
+					{{180, 0, 0},
+					{PosSecond, PosThird, FaceIndex * 100.0f},
+					{ScaleX, ScaleY, 1.0f}};
+				break;
 			}
-		}
-	}
-}
+			const int InstanceIndex = Planes->AddInstance(Transform);
 
-void AChunk::LoadPlanesYPositiveTouching() const
-{
-	bool ShouldAddPlane[256] = {false};
-	bool PlaneAdded[256] = {false};
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	if(AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z}))
-	{
-		for(int i = 0; i < 256; i++)
-			PlaneAdded[i] = false;
-		for(int x = 0; x < 16; x++)
-			for(int z = 0; z < 16; z++)
-				ShouldAddPlane[x * 16 + z] = Touching->BlocksData[LocationToBlockIndex(x, 15, z)].ShouldAddFace(GetWorld(),
-					&BlocksData[LocationToBlockIndex(x, 0, z)]);
-		
-		for(int i = 0; i < 256; i++)
-		{
-			if(ShouldAddPlane[i] && !PlaneAdded[i])
+			if(BlocksMaterial)
 			{
-				const int x1 = i / 16;
-				const int z1 = i % 16;
-				int x2 = x1;
-				int z2 = z1;
-				const int TextureIndex = Touching->BlocksData[LocationToBlockIndex(x1, 15, z2)].GetTextureIndex(GetWorld(), EFaceDirection::YPositive);
-				
-				for(; x2 < 16; x2++)
-					if (!(ShouldAddPlane[x2 * 16 + z1] && !PlaneAdded[x2 * 16 + z1]
-						&& Touching->BlocksData[LocationToBlockIndex(x2, 15, z1)].GetTextureIndex(GetWorld(), EFaceDirection::YPositive) == TextureIndex))
-						break;
-				x2--;
-				
-				for(; z2 < 16; z2++)
-				{
-					bool ShouldAddRow = true;
-					for(int x = x1; x <= x2; x++)
-						if(!(ShouldAddPlane[x * 16 + z2] && !PlaneAdded[x * 16 + z2]
-							&& Touching->BlocksData[LocationToBlockIndex(x, 15, z2)].GetTextureIndex(GetWorld(), EFaceDirection::YPositive) == TextureIndex))
-							ShouldAddRow = false;
-					if(!ShouldAddRow)
-						break;
-				}
-				z2--;
-				
-				for(int x = x1; x <= x2; x++)
-					for(int z = z1; z <= z2; z++)
-						PlaneAdded[x * 16 + z] = true;
-
-				const float PosX = (x1 + x2) / 2.0f * 100.0f + 50.0f;
-				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
-				const float ScaleX = x2 - x1 + 1.0f;
-				const float ScaleY = z2 - z1 + 1.0f;
-				const int InstanceIndex = Touching->Planes->AddInstance(FTransform(
-					{0, 0, 90},
-					{PosX, 1600.0f, PosZ},
-					{ScaleX, ScaleY, 1.0f}));
-
-				if(BlocksMaterial)
-				{
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
-				}
+				Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
+				Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
+				Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
 			}
 		}
 	}
 }
 
-void AChunk::LoadPlanesZNegativeTouching() const
+void AChunk::UnloadPlanesTouching(const EFaceDirection FaceDir) const
 {
-	bool ShouldAddPlane[256] = {false};
-	bool PlaneAdded[256] = {false};
 	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	if(AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1}))
+	AChunk* Touching = nullptr;
+	switch(FaceDir)
 	{
-		for(int i = 0; i < 256; i++)
-			PlaneAdded[i] = false;
-		for(int x = 0; x < 16; x++)
-			for(int y = 0; y < 16; y++)
-				ShouldAddPlane[x * 16 + y] = Touching->BlocksData[LocationToBlockIndex(x, y, 0)].ShouldAddFace(GetWorld(),
-					&BlocksData[LocationToBlockIndex(x, y, 15)]);
-		
-		for(int i = 0; i < 256; i++)
-		{
-			if(ShouldAddPlane[i] && !PlaneAdded[i])
-			{
-				const int x1 = i / 16;
-				const int y1 = i % 16;
-				int x2 = x1;
-				int y2 = y1;
-				const int TextureIndex = Touching->BlocksData[LocationToBlockIndex(x1, y1, 0)].GetTextureIndex(GetWorld(), EFaceDirection::ZNegative);
-				
-				for(; x2 < 16; x2++)
-					if (!(ShouldAddPlane[x2 * 16 + y1] && !PlaneAdded[x2 * 16 + y1]
-						&& Touching->BlocksData[LocationToBlockIndex(x2, y1, 0)].GetTextureIndex(GetWorld(), EFaceDirection::ZNegative) == TextureIndex))
-						break;
-				x2--;
-				
-				for(; y2 < 16; y2++)
-				{
-					bool ShouldAddRow = true;
-					for(int x = x1; x <= x2; x++)
-						if(!(ShouldAddPlane[x * 16 + y2] && !PlaneAdded[x * 16 + y2]
-							&& Touching->BlocksData[LocationToBlockIndex(x, y2, 0)].GetTextureIndex(GetWorld(), EFaceDirection::ZNegative) == TextureIndex))
-							ShouldAddRow = false;
-					if(!ShouldAddRow)
-						break;
-				}
-				y2--;
-				
-				for(int x = x1; x <= x2; x++)
-					for(int y = y1; y <= y2; y++)
-						PlaneAdded[x * 16 + y] = true;
-
-				const float PosX = (x1 + x2) / 2.0f * 100.0f + 50.0f;
-				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
-				const float ScaleX = x2 - x1 + 1.0f;
-				const float ScaleY = y2 - y1 + 1.0f;
-				const int InstanceIndex = Touching->Planes->AddInstance(FTransform(
-					{180, 0, 0},
-					{PosX, PosY, 0.0f},
-					{ScaleX, ScaleY, 1.0f}));
-				
-				if(BlocksMaterial)
-				{
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
-				}
-			}
-		}
+		case EFaceDirection::XPositive:
+			Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
+			break;
+		case EFaceDirection::XNegative:
+			Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
+			break;
+		case EFaceDirection::YPositive:
+			Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
+			break;
+		case EFaceDirection::YNegative:
+			Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
+			break;
+		case EFaceDirection::ZPositive:
+			Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
+			break;
+		case EFaceDirection::ZNegative:
+			Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
+			break;
+		default:
+			__debugbreak();
 	}
-}
-
-void AChunk::LoadPlanesXNegativeTouching() const
-{
-	bool ShouldAddPlane[256] = {false};
-	bool PlaneAdded[256] = {false};
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	if(AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z}))
-	{
-		for(int i = 0; i < 256; i++)
-			PlaneAdded[i] = false;
-		for(int z = 0; z < 16; z++)
-			for(int y = 0; y < 16; y++)
-				ShouldAddPlane[z * 16 + y] = Touching->BlocksData[LocationToBlockIndex(0, y, z)].ShouldAddFace(GetWorld(),
-					&BlocksData[LocationToBlockIndex(15, y, z)]);
-		
-		for(int i = 0; i < 256; i++)
-		{
-			if(ShouldAddPlane[i] && !PlaneAdded[i])
-			{
-				const int z1 = i / 16;
-				const int y1 = i % 16;
-				int z2 = z1;
-				int y2 = y1;
-				const int TextureIndex = Touching->BlocksData[LocationToBlockIndex(0, y1, z1)].GetTextureIndex(GetWorld(), EFaceDirection::XNegative);
-				
-				for(; z2 < 16; z2++)
-					if (!(ShouldAddPlane[z2 * 16 + y1] && !PlaneAdded[z2 * 16 + y1]
-						&& Touching->BlocksData[LocationToBlockIndex(0, y1, z2)].GetTextureIndex(GetWorld(), EFaceDirection::XNegative) == TextureIndex))
-						break;
-				z2--;
-				
-				for(; y2 < 16; y2++)
-				{
-					bool ShouldAddRow = true;
-					for(int z = z1; z <= z2; z++)
-						if(!(ShouldAddPlane[z * 16 + y2] && !PlaneAdded[z * 16 + y2]
-							&& Touching->BlocksData[LocationToBlockIndex(0, y2, z)].GetTextureIndex(GetWorld(), EFaceDirection::XNegative) == TextureIndex))
-							ShouldAddRow = false;
-					if(!ShouldAddRow)
-						break;
-				}
-				y2--;
-				
-				for(int z = z1; z <= z2; z++)
-					for(int y = y1; y <= y2; y++)
-						PlaneAdded[z * 16 + y] = true;
-
-				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
-				const float PosY = (y1 + y2) / 2.0f * 100.0f + 50.0f;
-				const float ScaleY = z2 - z1 + 1.0f;
-				const float ScaleX = y2 - y1 + 1.0f;
-				const int InstanceIndex = Touching->Planes->AddInstance(FTransform(
-					{0, 90, 90},
-					{0, PosY, PosZ},
-					{ScaleX, ScaleY, 1.0f}));
-				
-				if(BlocksMaterial)
-				{
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
-				}
-			}
-		}
-	}
-}
-
-void AChunk::LoadPlanesYNegativeTouching() const
-{
-	bool ShouldAddPlane[256] = {false};
-	bool PlaneAdded[256] = {false};
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	if(AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z}))
-	{
-		for(int i = 0; i < 256; i++)
-			PlaneAdded[i] = false;
-		for(int x = 0; x < 16; x++)
-			for(int z = 0; z < 16; z++)
-				ShouldAddPlane[x * 16 + z] = Touching->BlocksData[LocationToBlockIndex(x, 0, z)].ShouldAddFace(GetWorld(),
-					&BlocksData[LocationToBlockIndex(x, 15, z)]);;
-		
-		for(int i = 0; i < 256; i++)
-		{
-			if(ShouldAddPlane[i] && !PlaneAdded[i])
-			{
-				const int x1 = i / 16;
-				const int z1 = i % 16;
-				int x2 = x1;
-				int z2 = z1;
-				const int TextureIndex = Touching->BlocksData[LocationToBlockIndex(x1, 0, z2)].GetTextureIndex(GetWorld(), EFaceDirection::YNegative);
-				
-				for(; x2 < 16; x2++)
-					if (!(ShouldAddPlane[x2 * 16 + z1] && !PlaneAdded[x2 * 16 + z1]
-						&& Touching->BlocksData[LocationToBlockIndex(x2, 0, z1)].GetTextureIndex(GetWorld(), EFaceDirection::YNegative) == TextureIndex))
-						break;
-				x2--;
-				
-				for(; z2 < 16; z2++)
-				{
-					bool ShouldAddRow = true;
-					for(int x = x1; x <= x2; x++)
-						if(!(ShouldAddPlane[x * 16 + z2] && !PlaneAdded[x * 16 + z2]
-							&& Touching->BlocksData[LocationToBlockIndex(x, 0, z2)].GetTextureIndex(GetWorld(), EFaceDirection::YNegative) == TextureIndex))
-							ShouldAddRow = false;
-					if(!ShouldAddRow)
-						break;
-				}
-				z2--;
-				
-				for(int x = x1; x <= x2; x++)
-					for(int z = z1; z <= z2; z++)
-						PlaneAdded[x * 16 + z] = true;
-
-				const float PosX = (x1 + x2) / 2.0f * 100.0f + 50.0f;
-				const float PosZ = (z1 + z2) / 2.0f * 100.0f + 50.0f;
-				const float ScaleX = x2 - x1 + 1.0f;
-				const float ScaleY = z2 - z1 + 1.0f;
-				const int InstanceIndex = Touching->Planes->AddInstance(FTransform(
-					{0, 180, 90},
-					{PosX, 0.0f, PosZ},
-					{ScaleX, ScaleY, 1.0f}));
-				
-				if(BlocksMaterial)
-				{
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-					Touching->Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
-				}
-			}
-		}
-	}
-}
-
-void AChunk::UnloadPlanesZPositiveTouching() const
-{
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	if(AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1}))
+	if(Touching)
 	{
 		FTransform Transform;
 		TArray<int32> ToRemove;
 		for(int i = 0; i < Touching->Planes->GetInstanceCount(); i++)
-			if(Touching->Planes->GetInstanceTransform(i, Transform) && Transform.GetLocation().Z == 1600.0f)
-				ToRemove.Add(i);
-		Touching->Planes->RemoveInstances(ToRemove);
-	}
-}
-
-void AChunk::UnloadPlanesXPositiveTouching() const
-{
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	if(AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z}))
-	{
-		FTransform Transform;
-		TArray<int32> ToRemove;
-		for(int i = 0; i < Touching->Planes->GetInstanceCount(); i++)
-			if(Touching->Planes->GetInstanceTransform(i, Transform) && Transform.GetLocation().X == 1600.0f)
-				ToRemove.Add(i);
-		Touching->Planes->RemoveInstances(ToRemove);
-	}
-}
-
-void AChunk::UnloadPlanesYPositiveTouching() const
-{
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	if(AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z}))
-	{
-		FTransform Transform;
-		TArray<int32> ToRemove;
-		for(int i = 0; i < Touching->Planes->GetInstanceCount(); i++)
-			if(Touching->Planes->GetInstanceTransform(i, Transform) && Transform.GetLocation().Y == 1600.0f)
-				ToRemove.Add(i);
-		Touching->Planes->RemoveInstances(ToRemove);
-	}
-}
-
-void AChunk::UnloadPlanesZNegativeTouching() const
-{
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	if(AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1}))
-	{
-		FTransform Transform;
-		TArray<int32> ToRemove;
-		for(int i = 0; i < Touching->Planes->GetInstanceCount(); i++)
-			if(Touching->Planes->GetInstanceTransform(i, Transform) && Transform.GetLocation().Z == 0.0f)
-				ToRemove.Add(i);
-		Touching->Planes->RemoveInstances(ToRemove);
-	}
-}
-
-void AChunk::UnloadPlanesXNegativeTouching() const
-{
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	if(AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z}))
-	{
-		FTransform Transform;
-		TArray<int32> ToRemove;
-		for(int i = 0; i < Touching->Planes->GetInstanceCount(); i++)
-			if(Touching->Planes->GetInstanceTransform(i, Transform) && Transform.GetLocation().X == 0.0f)
-				ToRemove.Add(i);
-		Touching->Planes->RemoveInstances(ToRemove);
-	}
-}
-
-void AChunk::UnloadPlanesYNegativeTouching() const
-{
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	if(AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z}))
-	{
-		FTransform Transform;
-		TArray<int32> ToRemove;
-		for(int i = 0; i < Touching->Planes->GetInstanceCount(); i++)
-			if(Touching->Planes->GetInstanceTransform(i, Transform) && Transform.GetLocation().Y == 0.0f)
-				ToRemove.Add(i);
+			if(Touching->Planes->GetInstanceTransform(i, Transform))
+				switch(FaceDir)
+				{
+					case EFaceDirection::XPositive:
+						if(Transform.GetLocation().X == 1600.0f)
+							ToRemove.Add(i);
+						break;
+					case EFaceDirection::XNegative:
+						if(Transform.GetLocation().X == 0.0f)
+							ToRemove.Add(i);
+						break;
+					case EFaceDirection::YPositive:
+						if(Transform.GetLocation().Y == 1600.0f)
+							ToRemove.Add(i);
+						break;
+					case EFaceDirection::YNegative:
+						if(Transform.GetLocation().Y == 0.0f)
+							ToRemove.Add(i);
+						break;
+					case EFaceDirection::ZPositive:
+						if(Transform.GetLocation().Z == 1600.0f)
+							ToRemove.Add(i);
+						break;
+					case EFaceDirection::ZNegative:
+						if(Transform.GetLocation().Z == 0.0f)
+							ToRemove.Add(i);
+						break;
+				}
 		Touching->Planes->RemoveInstances(ToRemove);
 	}
 }

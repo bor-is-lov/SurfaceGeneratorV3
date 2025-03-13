@@ -16,6 +16,9 @@ class SURFACEGENERATORV3_API AMainPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
+	int ActualRenderDistance = 0;
+	float ActualZScale = 0.5f;
+
 protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputMappingContext> InputMapping;

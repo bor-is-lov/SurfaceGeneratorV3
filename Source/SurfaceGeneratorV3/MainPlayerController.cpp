@@ -23,18 +23,34 @@ void AMainPlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	PlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
-	Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(RenderDistance, ZScale, PlayerChunkLocation);
-	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->UpdateHeightMap(RenderDistance, PlayerChunkLocation);
+	Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(ActualRenderDistance, ActualZScale, PlayerChunkLocation);
+	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->UpdateHeightMap(ActualRenderDistance, PlayerChunkLocation);
 }
 
 void AMainPlayerController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (PlayerChunkLocation != AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation()))
+	if (PlayerChunkLocation != AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation()) || ActualRenderDistance != RenderDistance || ActualZScale != ZScale)
 	{
+		if(ActualRenderDistance < RenderDistance)
+			ActualRenderDistance++;
+		else if(ActualRenderDistance > RenderDistance)
+			ActualRenderDistance--;
+		
+		if(ActualZScale < ZScale)
+			if(ZScale - ActualZScale <= 0.1f)
+				ActualZScale = ZScale;
+			else
+				ActualZScale += 0.1f;
+		if(ActualZScale > ZScale)
+			if(ActualZScale - ZScale <= 0.1f)
+				ActualZScale = ZScale;
+			else
+				ActualZScale -= 0.1f;
+		
 		PlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
-		Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(RenderDistance, ZScale, PlayerChunkLocation);
-		GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->UpdateHeightMap(RenderDistance, PlayerChunkLocation);
+		Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(ActualRenderDistance, ActualZScale, PlayerChunkLocation);
+		GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->UpdateHeightMap(ActualRenderDistance, PlayerChunkLocation);
 	}
 }

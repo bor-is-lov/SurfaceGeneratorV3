@@ -49,7 +49,7 @@ void FTerrainGenerator::GenerateChunk(AChunk* Chunk) const
 				const int Height = 64 * Perlin.octave2D_11(
 					(ChunkLocation.X * 16 + x) * 0.003,
 					(ChunkLocation.Y * 16 + y) * 0.003,
-					6);
+					5);
 				(*HeightData)[x * 16 + y] = Height;
 				for(int z = 0; z < 16; z++)
 					if (ChunkLocation.Z * 16 + z <= Height - 5)

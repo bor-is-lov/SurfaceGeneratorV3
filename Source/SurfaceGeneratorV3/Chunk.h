@@ -20,37 +20,24 @@ class SURFACEGENERATORV3_API AChunk : public AActor
 public:
 	enum class EState{ Unloaded, Loading, Loaded, Unloading };
 	
-protected:	
+private:	
 	EState State;
 
 	UMaterial* BlocksMaterial;
-	
-	void LoadPlanesZPositive();
-	void LoadPlanesXPositive();
-	void LoadPlanesYPositive();
-	void LoadPlanesZNegative();
-	void LoadPlanesXNegative();
-	void LoadPlanesYNegative();
 
-	void LoadPlanesZPositiveTouching() const;
-	void LoadPlanesXPositiveTouching() const;
-	void LoadPlanesYPositiveTouching() const;
-	void LoadPlanesZNegativeTouching() const;
-	void LoadPlanesXNegativeTouching() const;
-	void LoadPlanesYNegativeTouching() const;
+	void UnloadPlanesTouching(const EFaceDirection FaceDir) const;
 	
-	void UnloadPlanesZPositiveTouching() const;
-	void UnloadPlanesXPositiveTouching() const;
-	void UnloadPlanesYPositiveTouching() const;
-	void UnloadPlanesZNegativeTouching() const;
-	void UnloadPlanesXNegativeTouching() const;
-	void UnloadPlanesYNegativeTouching() const;
 public:
 	AChunk();
 	virtual void BeginPlay() override;
 
 	void LoadPlanes();
 	void UnloadPlanes();
+
+private:
+	friend void AChunk::LoadPlanes();
+	void LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex, const AChunk* Touching);
+public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USceneComponent* SceneRoot;
