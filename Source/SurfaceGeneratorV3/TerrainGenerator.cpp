@@ -18,18 +18,27 @@ FTerrainGenerator::~FTerrainGenerator()
 	delete HeightMap;
 }
 
-void FTerrainGenerator::GenerateChunk(const AChunk* Chunk, TArray<FBlockInfo>& ToSpawn) const
+void FTerrainGenerator::GenerateChunk(AChunk* Chunk) const
 {
 	const FIntVector ChunkLocation = AChunk::ChunkWorldLocationToChunkLocation(Chunk->GetActorLocation());
-	const FIntVector2 HeightMapKey = {ChunkLocation.X, ChunkLocation.Y};
+	const FIntVector2 HeightMapKey(ChunkLocation.X, ChunkLocation.Y);
 	if(HeightMap->Contains(HeightMapKey))
 	{
 		TStaticArray<int, 256>* HeightData = HeightMap->Find(HeightMapKey);
 		for(int x = 0; x < 16; x++)
 			for(int y = 0; y < 16; y++)
 				for(int z = 0; z < 16; z++)
-					if(ChunkLocation.Z * 16 + z <= (*HeightData)[x * 16 + y])
-						ToSpawn.Add({0, FIntVector(x, y, z)});
+					if(ChunkLocation.Z * 16 + z <= (*HeightData)[x * 16 + y] - 5)
+						Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 1);
+					else if(ChunkLocation.Z * 16 + z <= (*HeightData)[x * 16 + y] - 1)
+						Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 2);
+					else if(ChunkLocation.Z * 16 + z == (*HeightData)[x * 16 + y])
+						if((*HeightData)[x * 16 + y] >= 0)
+							Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 3);
+						else
+							Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 2);
+					else
+						Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 0);
 	}
 	else
 	{
@@ -40,26 +49,25 @@ void FTerrainGenerator::GenerateChunk(const AChunk* Chunk, TArray<FBlockInfo>& T
 				const int Height = 64 * Perlin.octave2D_11(
 					(ChunkLocation.X * 16 + x) * 0.003,
 					(ChunkLocation.Y * 16 + y) * 0.003,
-					6);
+					5);
 				(*HeightData)[x * 16 + y] = Height;
 				for(int z = 0; z < 16; z++)
-					if (ChunkLocation.Z * 16 + z <= Height)
-						ToSpawn.Add({0, FIntVector(x, y, z)});
+					if (ChunkLocation.Z * 16 + z <= Height - 5)
+						Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 1);
+					else if (ChunkLocation.Z * 16 + z <= Height - 1)
+						Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 2);
+					else if (ChunkLocation.Z * 16 + z == Height)
+						if(Height >= 0)
+							Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 3);
+						else
+							Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 2);
+					else
+						Chunk->SetBlock(AChunk::LocationToBlockIndex(x, y, z), 0);
 			}
 	}
 }
 
-void FTerrainGenerator::AddChunkToSpawnQueue(AChunk* Chunk) const
-{
-	TArray<FBlockInfo> ToSpawn;
-	GenerateChunk(Chunk, ToSpawn);
-	if (!ToSpawn.IsEmpty())
-		OwnerGameStateBase->AddToSpawnInstancesQueue(Chunk, ToSpawn);
-	else
-		Chunk->EndLoading();
-}
-
-void FTerrainGenerator::UpdateHeightMap(int RenderDistance, FIntVector PlayerChunkLocation)
+void FTerrainGenerator::UpdateHeightMap(const int RenderDistance, const FIntVector& PlayerChunkLocation)
 {
 	TDoubleLinkedList<FIntVector2> KeysToDel;
 	for (auto Node : *HeightMap)

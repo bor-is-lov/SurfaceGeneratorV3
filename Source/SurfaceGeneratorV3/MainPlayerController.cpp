@@ -6,6 +6,8 @@
 #include "EnhancedInputSubsystems.h"
 #include "MainGameModeBase.h"
 #include "MainGameStateBase.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 void AMainPlayerController::SetupInputComponent()
 {
@@ -23,18 +25,53 @@ void AMainPlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	PlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
-	Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(RenderDistance, ZScale, PlayerChunkLocation);
-	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->UpdateHeightMap(RenderDistance, PlayerChunkLocation);
+	Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(ActualRenderDistance, ActualZScale, PlayerChunkLocation);
+	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->UpdateHeightMap(ActualRenderDistance, PlayerChunkLocation);
 }
 
 void AMainPlayerController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (PlayerChunkLocation != AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation()))
+	const FIntVector ActualPlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
+
+	if(const AChunk* Chunk = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk(ActualPlayerChunkLocation);
+		Chunk && Chunk->GetState() == AChunk::EState::Loaded)
 	{
-		PlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
-		Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(RenderDistance, ZScale, PlayerChunkLocation);
-		GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->UpdateHeightMap(RenderDistance, PlayerChunkLocation);
+		if(!bCanMove)
+		{
+			GetCharacter()->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+			bCanMove = true;
+		}
+	}
+	else if(bCanMove)
+	{
+		UCharacterMovementComponent* Movement = GetCharacter()->GetCharacterMovement();
+		Movement->StopMovementImmediately();
+		Movement->DisableMovement();
+		bCanMove = false;
+	}
+
+	if (PlayerChunkLocation != ActualPlayerChunkLocation || ActualRenderDistance != RenderDistance || ActualZScale != ZScale)
+	{
+		if(ActualRenderDistance < RenderDistance)
+			ActualRenderDistance++;
+		else if(ActualRenderDistance > RenderDistance)
+			ActualRenderDistance--;
+		
+		if(ActualZScale < ZScale)
+			if(ZScale - ActualZScale <= 0.1f)
+				ActualZScale = ZScale;
+			else
+				ActualZScale += 0.1f;
+		if(ActualZScale > ZScale)
+			if(ActualZScale - ZScale <= 0.1f)
+				ActualZScale = ZScale;
+			else
+				ActualZScale -= 0.1f;
+		
+		PlayerChunkLocation = ActualPlayerChunkLocation;
+		Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(ActualRenderDistance, ActualZScale, PlayerChunkLocation);
+		GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->UpdateHeightMap(ActualRenderDistance, PlayerChunkLocation);
 	}
 }

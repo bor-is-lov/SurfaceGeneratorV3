@@ -1,10 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "MainGameStateBase.h"
 
 #include "MainPlayerController.h"
-#include "Components/InstancedStaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 AMainGameStateBase::AMainGameStateBase()
@@ -38,64 +36,31 @@ void AMainGameStateBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if(!ClearInstancesQueue.IsEmpty())
+	AChunk* Chunk;
+	for(int i = 0; i < 8; i++)
 	{
-		FBlockTypeInChunk BlockType = ClearInstancesQueue.GetHead()->GetValue();
-		BlockType.GetBlockType()->ClearInstances();
-		ClearInstancesQueue.RemoveNode(ClearInstancesQueue.GetHead());
-		bool ToEndUnloading = true;
-		for(FBlockTypeInChunk& BlockType2 : ClearInstancesQueue)
-			if(BlockType2.Chunk == BlockType.Chunk)
-			{
-				ToEndUnloading = false;
-				break;
-			}
-		if(ToEndUnloading)
-			BlockType.Chunk->EndUnloading();
-	}
-	else
-		if(!SpawnInstancesQueue.IsEmpty())
+		if(UnloadMeshesQueue.Dequeue(Chunk))
 		{
-			FBlocksInfoInChunk& BlocksToSpawnInChunk = SpawnInstancesQueue.GetHead()->GetValue();
-			static TArray<TArray<FTransform>> BlocksTransforms;
-			BlocksTransforms.Empty();
-			BlocksTransforms.SetNum(BlocksClasses.Num());
-			for(int i = 0; i < 256; i++)
-			{
-				if (i >= BlocksToSpawnInChunk.BlocksInfo.Num())
-					break;
-				FVector Location = FVector(
-					50 + BlocksToSpawnInChunk.BlocksInfo[i].Position.X * 100,
-					50 + BlocksToSpawnInChunk.BlocksInfo[i].Position.Y * 100,
-					50 + BlocksToSpawnInChunk.BlocksInfo[i].Position.Z * 100);
-				BlocksTransforms[BlocksToSpawnInChunk.BlocksInfo[i].ISMIndex].Emplace(Location);
-			}
-			for(int i = 0; i < BlocksTransforms.Num(); i++)
-				BlocksToSpawnInChunk.GetBlockType(i)->AddInstances(BlocksTransforms[i], false);
-			
-			BlocksToSpawnInChunk.BlocksInfo.RemoveAt(0, FMath::Min(256, BlocksToSpawnInChunk.BlocksInfo.Num()));
-			if (BlocksToSpawnInChunk.BlocksInfo.IsEmpty())
-			{
-				AChunk* ChunkPtr = BlocksToSpawnInChunk.Chunk;
-				SpawnInstancesQueue.RemoveNode(SpawnInstancesQueue.GetHead());
-				bool ToEndLoading = true;
-				for(auto BlocksToSpawnInChunk2 : SpawnInstancesQueue)
-					if(BlocksToSpawnInChunk2.Chunk == ChunkPtr)
-					{
-						ToEndLoading = false;
-						break;
-					}
-				if(ToEndLoading)
-					ChunkPtr->EndLoading();
-			}
+			Chunk->UnloadPlanes();
+			Chunk->EndUnloading();
 		}
+		else if(!LoadMeshesQueue.IsEmpty())
+		{
+			Chunk = LoadMeshesQueue.GetHead()->GetValue();
+			Chunk->LoadPlanes();
+			Chunk->EndLoading();
+			LoadMeshesQueue.RemoveNode(LoadMeshesQueue.GetHead());
+		}
+		else
+			break;
+	}
 }
 
 void AMainGameStateBase::SpawnChunk(const FIntVector ChunkLocation)
 {
-	AChunk* Ptr = GetWorld()->SpawnActor<AChunk>(AChunk::MakeWorldLocation(ChunkLocation), FRotator::ZeroRotator);
-	Ptr->StartLoading();
-	ChunksMap.Add(ChunkLocation, Ptr);
+	AChunk* Chunk = GetWorld()->SpawnActor<AChunk>(AChunk::MakeWorldLocation(ChunkLocation), FRotator::ZeroRotator);
+	Chunk->StartLoading();
+	ChunksMap.Add(ChunkLocation, Chunk);
 }
 
 void AMainGameStateBase::DestroyChunk(const FIntVector ChunkLocation)
@@ -131,40 +96,40 @@ void AMainGameStateBase::ExtractChunk(const FIntVector ChunkLocation)
 {
 	if(ChunksMap.Contains(ChunkLocation))
 	{
-		AChunk* Ptr = *ChunksMap.Find(ChunkLocation);
-		switch(Ptr->GetState())
+		AChunk* Chunk = *ChunksMap.Find(ChunkLocation);
+		switch(Chunk->GetState())
 		{
 		case AChunk::EState::Loaded:
-			Ptr->StartUnloading();
+			Chunk->StartUnloading();
 			break;
 		case AChunk::EState::Loading:
-			Ptr->CloseLoading();
-			Ptr->StartUnloading();
+			Chunk->CloseLoading();
+			Chunk->StartUnloading();
 			break;
 		default:
 			break;
 		}
-		ChunksPool.Enqueue(Ptr);
+		ChunksPool.Enqueue(Chunk);
 		ChunksMap.Remove(ChunkLocation);
 	}
 }
 
-void AMainGameStateBase::AddToUnloadBlocksQueue(AChunk* Chunk, size_t BlockIndex)
+void AMainGameStateBase::AddToLoadMeshes(AChunk* Chunk)
 {
-	ClearInstancesQueue.AddTail({Chunk, BlockIndex});
+	LoadMeshesQueue.AddTail(Chunk);
 }
 
-void AMainGameStateBase::AddToSpawnInstancesQueue(AChunk* Chunk, TArray<FBlockInfo>& ToSpawn)
+void AMainGameStateBase::AddToUnloadMeshes(AChunk* Chunk)
 {
-	SpawnInstancesQueue.AddTail({Chunk, ToSpawn});
+	UnloadMeshesQueue.Enqueue(Chunk);
 }
 
 AChunk* AMainGameStateBase::GetChunk(const FIntVector ChunkLocation)
 {
 	if (!ChunksMap.Contains(ChunkLocation))
 		return nullptr;
-	AChunk* Ptr = *ChunksMap.Find(ChunkLocation);
-	if (!Ptr)
+	AChunk* Chunk = *ChunksMap.Find(ChunkLocation);
+	if (!Chunk)
 		ChunksMap.Remove(ChunkLocation);
-	return Ptr;
+	return Chunk;
 }
