@@ -42,8 +42,6 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USceneComponent* SceneRoot;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	class UBoxComponent* Border;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<FBlockData> BlocksData;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UHierarchicalInstancedStaticMeshComponent* Planes;

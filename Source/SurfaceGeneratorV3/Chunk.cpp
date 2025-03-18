@@ -2,7 +2,6 @@
 
 #include "Chunk.h"
 #include "MainGameStateBase.h"
-#include "Components/BoxComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 
 void AChunk::LoadPlanes()
@@ -305,31 +304,30 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 void AChunk::UnloadPlanesTouching(const EFaceDirection FaceDir) const
 {
 	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	AChunk* Touching = nullptr;
 	switch(FaceDir)
 	{
 		case EFaceDirection::XPositive:
-			Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
+			ChunkLocation.X--;
 			break;
 		case EFaceDirection::XNegative:
-			Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
+			ChunkLocation.X++;
 			break;
 		case EFaceDirection::YPositive:
-			Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
+			ChunkLocation.Y--;
 			break;
 		case EFaceDirection::YNegative:
-			Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
+			ChunkLocation.Y++;
 			break;
 		case EFaceDirection::ZPositive:
-			Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
+			ChunkLocation.Z--;
 			break;
 		case EFaceDirection::ZNegative:
-			Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
+			ChunkLocation.Z++;
 			break;
 		default:
 			__debugbreak();
 	}
-	if(Touching)
+	if(const AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk(ChunkLocation))
 	{
 		FTransform Transform;
 		TArray<int32> ToRemove;
@@ -372,13 +370,6 @@ AChunk::AChunk()
 	
 	SceneRoot = CreateDefaultSubobject<USceneComponent>("SceneRoot");
 	RootComponent = SceneRoot;
-	
-	Border = CreateDefaultSubobject<UBoxComponent>("Border");
-	Border->SetupAttachment(RootComponent);
-	Border->SetBoxExtent(FVector(800, 800, 800), false);
-	Border->SetRelativeLocation(FVector(800, 800, 800));
-	Border->SetGenerateOverlapEvents(false);
-	Border->SetComponentTickEnabled(false);
 
 	Planes = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>("Planes");
 	Planes->SetupAttachment(RootComponent);
@@ -401,8 +392,6 @@ void AChunk::BeginPlay()
 	BlocksMaterial = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->BlocksMaterial;
 	if(BlocksMaterial)
 		Planes->SetMaterial(0, BlocksMaterial);
-	Border->SetCollisionResponseToAllChannels(ECR_Block);
-	Border->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void AChunk::StartLoading()
@@ -410,21 +399,18 @@ void AChunk::StartLoading()
 	State = EState::Loading;
 	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->GenerateChunk(this);
 	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->AddToLoadMeshes(this);
-	Border->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 }
 
 void AChunk::EndLoading()
 {
 	State = EState::Loaded;
 	SetActorHiddenInGame(false);
-	Border->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void AChunk::StartUnloading()
 {
 	State = EState::Unloading;
 	SetActorHiddenInGame(true);
-	Border->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	
 	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->AddToUnloadMeshes(this);
 }
@@ -433,7 +419,6 @@ void AChunk::EndUnloading()
 {
 	State = EState::Unloaded;
 	SetActorHiddenInGame(true);
-	Border->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void AChunk::CloseLoading()

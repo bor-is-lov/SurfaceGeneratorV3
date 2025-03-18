@@ -18,6 +18,7 @@ class SURFACEGENERATORV3_API AMainPlayerController : public APlayerController
 
 	int ActualRenderDistance = 0;
 	float ActualZScale = 0.5f;
+	bool bCanMove;
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
