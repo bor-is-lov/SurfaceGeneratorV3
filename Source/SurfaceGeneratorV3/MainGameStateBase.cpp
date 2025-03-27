@@ -7,8 +7,8 @@
 
 AMainGameStateBase::AMainGameStateBase()
 {
-	srand(time(NULL));
-	TerrainGenerator = new FTerrainGenerator(rand(), this);
+	srand(time(nullptr));
+	TerrainGenerator = new FTerrainGenerator(rand());
 	
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
@@ -25,11 +25,14 @@ void AMainGameStateBase::BeginPlay()
 	
 	AMainPlayerController* Controller = Cast<AMainPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
 	if(Controller)
-		for (int i = 0; i < pow(Controller->GetRenderDistance() * 2 + 1, 3); i++)
+	{
+		const int count = pow(Controller->GetRenderDistance() * 2 + 1, 3) * Controller->GetZScale();
+		for (int i = 0; i < count; i++)
 		{
 			AChunk* Ptr = GetWorld()->SpawnActor<AChunk>();
 			ChunksPool.Enqueue(Ptr);
 		}
+	}
 }
 
 void AMainGameStateBase::Tick(float DeltaTime)
@@ -37,6 +40,16 @@ void AMainGameStateBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	AChunk* Chunk;
+	
+	for(int i = 0; i < 8; i++)
+		if(!LoadDataQueue.IsEmpty())
+		{
+			Chunk = LoadDataQueue.GetHead()->GetValue();
+			TerrainGenerator->GenerateChunk(Chunk);
+			Chunk->EndLoadingData();
+			LoadDataQueue.RemoveNode(LoadDataQueue.GetHead());
+			AddToLoadMeshes(Chunk);
+		}
 	for(int i = 0; i < 8; i++)
 	{
 		if(UnloadMeshesQueue.Dequeue(Chunk))
@@ -106,12 +119,21 @@ void AMainGameStateBase::ExtractChunk(const FIntVector ChunkLocation)
 			Chunk->CloseLoading();
 			Chunk->StartUnloading();
 			break;
+		case AChunk::EState::DataLoaded:
+			Chunk->CloseLoading();
+			Chunk->StartUnloading();
+			break;
 		default:
 			break;
 		}
 		ChunksPool.Enqueue(Chunk);
 		ChunksMap.Remove(ChunkLocation);
 	}
+}
+
+void AMainGameStateBase::AddToLoadData(AChunk* Chunk)
+{
+	LoadDataQueue.AddTail(Chunk);
 }
 
 void AMainGameStateBase::AddToLoadMeshes(AChunk* Chunk)

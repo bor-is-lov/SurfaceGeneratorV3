@@ -18,7 +18,7 @@ class SURFACEGENERATORV3_API AMainPlayerController : public APlayerController
 
 	int ActualRenderDistance = 0;
 	float ActualZScale = 0.5f;
-	bool bCanMove;
+	bool bCanMove = true;
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
@@ -37,5 +37,5 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	inline int GetRenderDistance() const { return RenderDistance; }
-	inline int GetZScale() const { return ZScale; }
+	inline float GetZScale() const { return ZScale; }
 };

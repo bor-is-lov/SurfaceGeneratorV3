@@ -26,6 +26,7 @@ class SURFACEGENERATORV3_API AMainGameStateBase : public AGameStateBase
 	TQueue<AChunk*> ChunksPool;
 
 	friend void AChunk::CloseLoading();
+	TDoubleLinkedList<AChunk*> LoadDataQueue;
 	TDoubleLinkedList<AChunk*> LoadMeshesQueue;
 	TQueue<AChunk*> UnloadMeshesQueue;
 	
@@ -48,7 +49,8 @@ public:
 	
 	void PlaceChunk(const FIntVector ChunkLocation);
 	void ExtractChunk(const FIntVector ChunkLocation);
-
+	
+	void AddToLoadData(AChunk* Chunk);
 	void AddToLoadMeshes(AChunk* Chunk);
 	void AddToUnloadMeshes(AChunk* Chunk);
 	

@@ -4,6 +4,7 @@
 
 #include "Chunk.h"
 #include "EnhancedInputSubsystems.h"
+#include "MainCharacter.h"
 #include "MainGameModeBase.h"
 #include "MainGameStateBase.h"
 #include "GameFramework/Character.h"
@@ -26,7 +27,6 @@ void AMainPlayerController::BeginPlay()
 
 	PlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
 	Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(ActualRenderDistance, ActualZScale, PlayerChunkLocation);
-	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->UpdateHeightMap(ActualRenderDistance, PlayerChunkLocation);
 }
 
 void AMainPlayerController::Tick(float DeltaTime)
@@ -35,21 +35,24 @@ void AMainPlayerController::Tick(float DeltaTime)
 
 	const FIntVector ActualPlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
 
-	if(const AChunk* Chunk = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk(ActualPlayerChunkLocation);
-		Chunk && Chunk->GetState() == AChunk::EState::Loaded)
+	if(Cast<AMainCharacter>(GetCharacter()))
 	{
-		if(!bCanMove)
+		if(const AChunk* Chunk = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk(ActualPlayerChunkLocation);
+			Chunk && Chunk->GetState() == AChunk::EState::Loaded)
 		{
-			GetCharacter()->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-			bCanMove = true;
+			if(!bCanMove)
+			{
+				GetCharacter()->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+				bCanMove = true;
+			}
 		}
-	}
-	else if(bCanMove)
-	{
-		UCharacterMovementComponent* Movement = GetCharacter()->GetCharacterMovement();
-		Movement->StopMovementImmediately();
-		Movement->DisableMovement();
-		bCanMove = false;
+		else if(bCanMove)
+		{
+			UCharacterMovementComponent* Movement = GetCharacter()->GetCharacterMovement();
+			Movement->StopMovementImmediately();
+			Movement->DisableMovement();
+			bCanMove = false;
+		}
 	}
 
 	if (PlayerChunkLocation != ActualPlayerChunkLocation || ActualRenderDistance != RenderDistance || ActualZScale != ZScale)
@@ -72,6 +75,5 @@ void AMainPlayerController::Tick(float DeltaTime)
 		
 		PlayerChunkLocation = ActualPlayerChunkLocation;
 		Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(ActualRenderDistance, ActualZScale, PlayerChunkLocation);
-		GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->UpdateHeightMap(ActualRenderDistance, PlayerChunkLocation);
 	}
 }

@@ -7,40 +7,40 @@
 void AChunk::LoadPlanes()
 {
 	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
+	AChunk* Touching = MainGameState->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
 	for(int x = 0; x < 16; x++)
 		LoadPlanesAtIndex(EFaceDirection::XPositive, x, Touching);
-	if(Touching)
+	if(Touching && Touching->State == EState::Loaded)
 		Touching->LoadPlanesAtIndex(EFaceDirection::XNegative, 0, this);
 	
-	Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
 	for(int y = 0; y < 16; y++)
 		LoadPlanesAtIndex(EFaceDirection::YPositive, y, Touching);
-	if(Touching)
+	if(Touching && Touching->State == EState::Loaded)
 		Touching->LoadPlanesAtIndex(EFaceDirection::YNegative, 0, this);
 	
-	Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
 	for(int z = 0; z < 16; z++)
 		LoadPlanesAtIndex(EFaceDirection::ZPositive, z, Touching);
-	if(Touching)
+	if(Touching && Touching->State == EState::Loaded)
 		Touching->LoadPlanesAtIndex(EFaceDirection::ZNegative, 0, this);
 	
-	Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
+	Touching = MainGameState->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
 	for(int x = 0; x < 16; x++)
 		LoadPlanesAtIndex(EFaceDirection::XNegative, x, Touching);
-	if(Touching)
+	if(Touching && Touching->State == EState::Loaded)
 		Touching->LoadPlanesAtIndex(EFaceDirection::XPositive, 15, this);
 	
-	Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
 	for(int y = 0; y < 16; y++)
 		LoadPlanesAtIndex(EFaceDirection::YNegative, y, Touching);
-	if(Touching)
+	if(Touching && Touching->State == EState::Loaded)
 		Touching->LoadPlanesAtIndex(EFaceDirection::YPositive, 15, this);
 	
-	Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
 	for(int z = 0; z < 16; z++)
 		LoadPlanesAtIndex(EFaceDirection::ZNegative, z, Touching);
-	if(Touching)
+	if(Touching && Touching->State == EState::Loaded)
 		Touching->LoadPlanesAtIndex(EFaceDirection::ZPositive, 15, this);
 
 }
@@ -94,7 +94,7 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 			for(; *third < 16; (*third)++)
 				if(FaceDir == EFaceDirection::XPositive || FaceDir == EFaceDirection::YPositive || FaceDir == EFaceDirection::ZPositive)
 					if(*first == 15)
-						if(Touching)
+						if(Touching && (Touching->State == EState::DataLoaded || Touching->State == EState::Loaded))
 						{
 							const int tempX = x, tempY = y, tempZ = z;
 							*first = 0;
@@ -115,7 +115,7 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 						}
 			else
 				if(*first == 0)
-					if(Touching)
+					if(Touching && (Touching->State == EState::DataLoaded || Touching->State == EState::Loaded))
 					{
 						const int tempX = x, tempY = y, tempZ = z;
 						*first = 15;
@@ -327,7 +327,7 @@ void AChunk::UnloadPlanesTouching(const EFaceDirection FaceDir) const
 		default:
 			__debugbreak();
 	}
-	if(const AChunk* Touching = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk(ChunkLocation))
+	if(const AChunk* Touching = MainGameState->GetChunk(ChunkLocation))
 	{
 		FTransform Transform;
 		TArray<int32> ToRemove;
@@ -389,7 +389,8 @@ void AChunk::BeginPlay()
 	
 	SetActorTickEnabled(false);
 	SetActorHiddenInGame(true);
-	BlocksMaterial = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->BlocksMaterial;
+	MainGameState = GetWorld()->GetGameStateChecked<AMainGameStateBase>();
+	BlocksMaterial = MainGameState->BlocksMaterial;
 	if(BlocksMaterial)
 		Planes->SetMaterial(0, BlocksMaterial);
 }
@@ -397,8 +398,7 @@ void AChunk::BeginPlay()
 void AChunk::StartLoading()
 {
 	State = EState::Loading;
-	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->TerrainGenerator->GenerateChunk(this);
-	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->AddToLoadMeshes(this);
+	MainGameState->AddToLoadData(this);
 }
 
 void AChunk::EndLoading()
@@ -407,12 +407,17 @@ void AChunk::EndLoading()
 	SetActorHiddenInGame(false);
 }
 
+void AChunk::EndLoadingData()
+{
+	State = EState::DataLoaded;
+}
+
 void AChunk::StartUnloading()
 {
 	State = EState::Unloading;
 	SetActorHiddenInGame(true);
 	
-	GetWorld()->GetGameStateChecked<AMainGameStateBase>()->AddToUnloadMeshes(this);
+	MainGameState->AddToUnloadMeshes(this);
 }
 
 void AChunk::EndUnloading()
@@ -423,16 +428,19 @@ void AChunk::EndUnloading()
 
 void AChunk::CloseLoading()
 {
-	TDoubleLinkedList<AChunk*>* LoadMeshesQueue = &GetWorld()->GetGameStateChecked<AMainGameStateBase>()->LoadMeshesQueue;
-	if(auto NodeToRemove = LoadMeshesQueue->FindNode(this))
-		LoadMeshesQueue->RemoveNode(NodeToRemove);
+	if(auto NodeToRemove = MainGameState->LoadMeshesQueue.FindNode(this))
+		MainGameState->LoadMeshesQueue.RemoveNode(NodeToRemove);
+	if(auto NodeToRemove = MainGameState->LoadDataQueue.FindNode(this))
+		MainGameState->LoadDataQueue.RemoveNode(NodeToRemove);
+	
 }
 
 void AChunk::SetBlock(const size_t InChunkIndex, const size_t TypeIndex)
 {
-	const auto GameState = GetWorld()->GetGameStateChecked<AMainGameStateBase>();
-	if(GameState->BlocksDefaults.Num() >= TypeIndex)
+	if(MainGameState->BlocksDefaults.Num() >= TypeIndex)
 		BlocksData[InChunkIndex].SetBlock(TypeIndex);
+	else
+		BlocksData[InChunkIndex].SetBlock(0);
 }
 
 FIntVector AChunk::ActorLocationToChunkLocation(const FVector& ActorLocation)

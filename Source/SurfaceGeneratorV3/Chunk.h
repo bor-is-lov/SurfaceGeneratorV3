@@ -18,13 +18,16 @@ class SURFACEGENERATORV3_API AChunk : public AActor
 	GENERATED_BODY()
 
 public:
-	enum class EState{ Unloaded, Loading, Loaded, Unloading };
+	enum class EState{ Unloaded, Loading, DataLoaded, Loaded, Unloading };
 	
 private:	
 	EState State;
 
 	UMaterial* BlocksMaterial;
 
+	class AMainGameStateBase* MainGameState;
+
+	void LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex, const AChunk* Touching);
 	void UnloadPlanesTouching(const EFaceDirection FaceDir) const;
 	
 public:
@@ -33,11 +36,6 @@ public:
 
 	void LoadPlanes();
 	void UnloadPlanes();
-
-private:
-	friend void AChunk::LoadPlanes();
-	void LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex, const AChunk* Touching);
-public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USceneComponent* SceneRoot;
@@ -48,6 +46,7 @@ public:
 	
 	void StartLoading();
 	void EndLoading();
+	void EndLoadingData();
 	void StartUnloading();
 	void EndUnloading();
 	// Stops loading in a safe manner. Doesn't unload chunk.
