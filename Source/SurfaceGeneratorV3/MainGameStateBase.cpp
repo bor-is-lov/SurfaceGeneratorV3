@@ -32,6 +32,8 @@ void AMainGameStateBase::BeginPlay()
 			AChunk* Ptr = GetWorld()->SpawnActor<AChunk>();
 			ChunksPool.Enqueue(Ptr);
 		}
+
+		Controller->GetPawn()->SetActorLocation(TerrainGenerator->GetSpawnPosition());
 	}
 }
 
@@ -42,27 +44,19 @@ void AMainGameStateBase::Tick(float DeltaTime)
 	AChunk* Chunk;
 	
 	for(int i = 0; i < 8; i++)
-		if(!LoadDataQueue.IsEmpty())
-		{
-			Chunk = LoadDataQueue.GetHead()->GetValue();
-			TerrainGenerator->GenerateChunk(Chunk);
-			Chunk->EndLoadingData();
-			LoadDataQueue.RemoveNode(LoadDataQueue.GetHead());
-			AddToLoadMeshes(Chunk);
-		}
-	for(int i = 0; i < 8; i++)
 	{
-		if(UnloadMeshesQueue.Dequeue(Chunk))
+		if(UnloadChunksQueue.Dequeue(Chunk))
 		{
 			Chunk->UnloadPlanes();
 			Chunk->EndUnloading();
 		}
-		else if(!LoadMeshesQueue.IsEmpty())
+		else if(!LoadChunksQueue.IsEmpty())
 		{
-			Chunk = LoadMeshesQueue.GetHead()->GetValue();
+			Chunk = LoadChunksQueue.GetHead()->GetValue();
+			TerrainGenerator->GenerateChunk(Chunk);
 			Chunk->LoadPlanes();
 			Chunk->EndLoading();
-			LoadMeshesQueue.RemoveNode(LoadMeshesQueue.GetHead());
+			LoadChunksQueue.RemoveNode(LoadChunksQueue.GetHead());
 		}
 		else
 			break;
@@ -119,10 +113,6 @@ void AMainGameStateBase::ExtractChunk(const FIntVector ChunkLocation)
 			Chunk->CloseLoading();
 			Chunk->StartUnloading();
 			break;
-		case AChunk::EState::DataLoaded:
-			Chunk->CloseLoading();
-			Chunk->StartUnloading();
-			break;
 		default:
 			break;
 		}
@@ -131,19 +121,14 @@ void AMainGameStateBase::ExtractChunk(const FIntVector ChunkLocation)
 	}
 }
 
-void AMainGameStateBase::AddToLoadData(AChunk* Chunk)
+void AMainGameStateBase::AddToLoadChunks(AChunk* Chunk)
 {
-	LoadDataQueue.AddTail(Chunk);
+	LoadChunksQueue.AddTail(Chunk);
 }
 
-void AMainGameStateBase::AddToLoadMeshes(AChunk* Chunk)
+void AMainGameStateBase::AddToUnloadChunks(AChunk* Chunk)
 {
-	LoadMeshesQueue.AddTail(Chunk);
-}
-
-void AMainGameStateBase::AddToUnloadMeshes(AChunk* Chunk)
-{
-	UnloadMeshesQueue.Enqueue(Chunk);
+	UnloadChunksQueue.Enqueue(Chunk);
 }
 
 AChunk* AMainGameStateBase::GetChunk(const FIntVector ChunkLocation)

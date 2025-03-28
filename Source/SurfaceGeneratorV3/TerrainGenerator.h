@@ -13,4 +13,5 @@ public:
 	FTerrainGenerator(unsigned int Seed);
 
 	void GenerateChunk(AChunk* Chunk) const;
+	FVector GetSpawnPosition() const;
 };

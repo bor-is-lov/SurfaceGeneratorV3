@@ -33,8 +33,13 @@ void FTerrainGenerator::GenerateChunk(AChunk* Chunk) const
 						Chunk->SetBlock(BlockIndex, 3);
 					else
 						Chunk->SetBlock(BlockIndex, 2);
-					else
-						Chunk->SetBlock(BlockIndex, 0);
+				else
+					Chunk->SetBlock(BlockIndex, 0);
 			}
 		}
+}
+
+FVector FTerrainGenerator::GetSpawnPosition() const
+{
+	return {50.0f, 50.0f, 6400.0f * Perlin.octave2D_11(0.0, 0.0, 5) + 200.0f};
 }

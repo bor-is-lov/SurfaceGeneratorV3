@@ -8,41 +8,70 @@ void AChunk::LoadPlanes()
 {
 	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
 	AChunk* Touching = MainGameState->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
-	for(int x = 0; x < 16; x++)
-		LoadPlanesAtIndex(EFaceDirection::XPositive, x, Touching);
 	if(Touching && Touching->State == EState::Loaded)
+	{
+		for(int x = 0; x < 16; x++)
+			LoadPlanesAtIndex(EFaceDirection::XPositive, x, Touching);
 		Touching->LoadPlanesAtIndex(EFaceDirection::XNegative, 0, this);
+	}
+	else
+		for(int x = 0; x < 16; x++)
+			LoadPlanesAtIndex(EFaceDirection::XPositive, x, nullptr);
 	
 	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
-	for(int y = 0; y < 16; y++)
-		LoadPlanesAtIndex(EFaceDirection::YPositive, y, Touching);
 	if(Touching && Touching->State == EState::Loaded)
+	{
+		for(int y = 0; y < 16; y++)
+			LoadPlanesAtIndex(EFaceDirection::YPositive, y, Touching);
 		Touching->LoadPlanesAtIndex(EFaceDirection::YNegative, 0, this);
+	}
+	else
+		for(int y = 0; y < 16; y++)
+			LoadPlanesAtIndex(EFaceDirection::YPositive, y, nullptr);
 	
 	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
-	for(int z = 0; z < 16; z++)
-		LoadPlanesAtIndex(EFaceDirection::ZPositive, z, Touching);
 	if(Touching && Touching->State == EState::Loaded)
+	{
+		for(int z = 0; z < 16; z++)
+			LoadPlanesAtIndex(EFaceDirection::ZPositive, z, Touching);
 		Touching->LoadPlanesAtIndex(EFaceDirection::ZNegative, 0, this);
+	}
+	else
+		for(int z = 0; z < 16; z++)
+			LoadPlanesAtIndex(EFaceDirection::ZPositive, z, nullptr);
 	
 	Touching = MainGameState->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
-	for(int x = 0; x < 16; x++)
-		LoadPlanesAtIndex(EFaceDirection::XNegative, x, Touching);
 	if(Touching && Touching->State == EState::Loaded)
+	{
+		for(int x = 0; x < 16; x++)
+			LoadPlanesAtIndex(EFaceDirection::XNegative, x, Touching);
 		Touching->LoadPlanesAtIndex(EFaceDirection::XPositive, 15, this);
+	}
+	else
+		for(int x = 0; x < 16; x++)
+			LoadPlanesAtIndex(EFaceDirection::XNegative, x, nullptr);
 	
 	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
-	for(int y = 0; y < 16; y++)
-		LoadPlanesAtIndex(EFaceDirection::YNegative, y, Touching);
 	if(Touching && Touching->State == EState::Loaded)
+	{
+		for(int y = 0; y < 16; y++)
+			LoadPlanesAtIndex(EFaceDirection::YNegative, y, Touching);
 		Touching->LoadPlanesAtIndex(EFaceDirection::YPositive, 15, this);
+	}
+	else
+		for(int y = 0; y < 16; y++)
+			LoadPlanesAtIndex(EFaceDirection::YNegative, y, nullptr);
 	
 	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
-	for(int z = 0; z < 16; z++)
-		LoadPlanesAtIndex(EFaceDirection::ZNegative, z, Touching);
 	if(Touching && Touching->State == EState::Loaded)
+	{
+		for(int z = 0; z < 16; z++)
+			LoadPlanesAtIndex(EFaceDirection::ZNegative, z, Touching);
 		Touching->LoadPlanesAtIndex(EFaceDirection::ZPositive, 15, this);
-
+	}
+	else
+		for(int z = 0; z < 16; z++)
+			LoadPlanesAtIndex(EFaceDirection::ZNegative, z, nullptr);
 }
 
 void AChunk::UnloadPlanes()
@@ -94,7 +123,7 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 			for(; *third < 16; (*third)++)
 				if(FaceDir == EFaceDirection::XPositive || FaceDir == EFaceDirection::YPositive || FaceDir == EFaceDirection::ZPositive)
 					if(*first == 15)
-						if(Touching && (Touching->State == EState::DataLoaded || Touching->State == EState::Loaded))
+						if(Touching)
 						{
 							const int tempX = x, tempY = y, tempZ = z;
 							*first = 0;
@@ -115,7 +144,7 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 						}
 			else
 				if(*first == 0)
-					if(Touching && (Touching->State == EState::DataLoaded || Touching->State == EState::Loaded))
+					if(Touching)
 					{
 						const int tempX = x, tempY = y, tempZ = z;
 						*first = 15;
@@ -398,7 +427,7 @@ void AChunk::BeginPlay()
 void AChunk::StartLoading()
 {
 	State = EState::Loading;
-	MainGameState->AddToLoadData(this);
+	MainGameState->AddToLoadChunks(this);
 }
 
 void AChunk::EndLoading()
@@ -407,17 +436,12 @@ void AChunk::EndLoading()
 	SetActorHiddenInGame(false);
 }
 
-void AChunk::EndLoadingData()
-{
-	State = EState::DataLoaded;
-}
-
 void AChunk::StartUnloading()
 {
 	State = EState::Unloading;
 	SetActorHiddenInGame(true);
 	
-	MainGameState->AddToUnloadMeshes(this);
+	MainGameState->AddToUnloadChunks(this);
 }
 
 void AChunk::EndUnloading()
@@ -428,11 +452,8 @@ void AChunk::EndUnloading()
 
 void AChunk::CloseLoading()
 {
-	if(auto NodeToRemove = MainGameState->LoadMeshesQueue.FindNode(this))
-		MainGameState->LoadMeshesQueue.RemoveNode(NodeToRemove);
-	if(auto NodeToRemove = MainGameState->LoadDataQueue.FindNode(this))
-		MainGameState->LoadDataQueue.RemoveNode(NodeToRemove);
-	
+	if(auto NodeToRemove = MainGameState->LoadChunksQueue.FindNode(this))
+		MainGameState->LoadChunksQueue.RemoveNode(NodeToRemove);
 }
 
 void AChunk::SetBlock(const size_t InChunkIndex, const size_t TypeIndex)

@@ -26,9 +26,8 @@ class SURFACEGENERATORV3_API AMainGameStateBase : public AGameStateBase
 	TQueue<AChunk*> ChunksPool;
 
 	friend void AChunk::CloseLoading();
-	TDoubleLinkedList<AChunk*> LoadDataQueue;
-	TDoubleLinkedList<AChunk*> LoadMeshesQueue;
-	TQueue<AChunk*> UnloadMeshesQueue;
+	TDoubleLinkedList<AChunk*> LoadChunksQueue;
+	TQueue<AChunk*> UnloadChunksQueue;
 	
 	void SpawnChunk(const FIntVector ChunkLocation);
 	void DestroyChunk(const FIntVector ChunkLocation);
@@ -50,9 +49,8 @@ public:
 	void PlaceChunk(const FIntVector ChunkLocation);
 	void ExtractChunk(const FIntVector ChunkLocation);
 	
-	void AddToLoadData(AChunk* Chunk);
-	void AddToLoadMeshes(AChunk* Chunk);
-	void AddToUnloadMeshes(AChunk* Chunk);
+	void AddToLoadChunks(AChunk* Chunk);
+	void AddToUnloadChunks(AChunk* Chunk);
 	
 	UFUNCTION(BlueprintCallable)
 	AChunk* GetChunk(const FIntVector ChunkLocation);

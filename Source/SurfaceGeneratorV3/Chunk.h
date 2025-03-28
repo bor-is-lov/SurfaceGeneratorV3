@@ -18,7 +18,7 @@ class SURFACEGENERATORV3_API AChunk : public AActor
 	GENERATED_BODY()
 
 public:
-	enum class EState{ Unloaded, Loading, DataLoaded, Loaded, Unloading };
+	enum class EState{ Unloaded, Loading, Loaded, Unloading };
 	
 private:	
 	EState State;
@@ -46,7 +46,6 @@ public:
 	
 	void StartLoading();
 	void EndLoading();
-	void EndLoadingData();
 	void StartUnloading();
 	void EndUnloading();
 	// Stops loading in a safe manner. Doesn't unload chunk.
