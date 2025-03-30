@@ -5,7 +5,7 @@
 #include "MainPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
-AMainGameStateBase::AMainGameStateBase()
+AMainGameStateBase::AMainGameStateBase(): BlocksMaterial(nullptr)
 {
 	srand(time(nullptr));
 	TerrainGenerator = new FTerrainGenerator(rand());
@@ -57,6 +57,7 @@ void AMainGameStateBase::Tick(float DeltaTime)
 			Chunk->LoadPlanes();
 			Chunk->EndLoading();
 			LoadChunksQueue.RemoveNode(LoadChunksQueue.GetHead());
+			Chunk->InLoadChunksQueue = nullptr;
 		}
 		else
 			break;
@@ -110,7 +111,8 @@ void AMainGameStateBase::ExtractChunk(const FIntVector ChunkLocation)
 			Chunk->StartUnloading();
 			break;
 		case AChunk::EState::Loading:
-			Chunk->CloseLoading();
+			if(Chunk->InLoadChunksQueue)
+				LoadChunksQueue.RemoveNode(Chunk->InLoadChunksQueue);
 			Chunk->StartUnloading();
 			break;
 		default:
@@ -124,6 +126,7 @@ void AMainGameStateBase::ExtractChunk(const FIntVector ChunkLocation)
 void AMainGameStateBase::AddToLoadChunks(AChunk* Chunk)
 {
 	LoadChunksQueue.AddTail(Chunk);
+	Chunk->InLoadChunksQueue = LoadChunksQueue.GetTail();
 }
 
 void AMainGameStateBase::AddToUnloadChunks(AChunk* Chunk)

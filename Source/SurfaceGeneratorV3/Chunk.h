@@ -31,6 +31,8 @@ private:
 	void UnloadPlanesTouching(const EFaceDirection FaceDir) const;
 	
 public:
+	TDoubleLinkedList<AChunk*>::TDoubleLinkedListNode* InLoadChunksQueue;
+	
 	AChunk();
 	virtual void BeginPlay() override;
 
@@ -48,8 +50,6 @@ public:
 	void EndLoading();
 	void StartUnloading();
 	void EndUnloading();
-	// Stops loading in a safe manner. Doesn't unload chunk.
-	void CloseLoading();
 
 	inline EState GetState() const { return State; }
 

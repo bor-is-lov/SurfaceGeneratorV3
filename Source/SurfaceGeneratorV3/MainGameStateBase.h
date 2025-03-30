@@ -25,7 +25,6 @@ class SURFACEGENERATORV3_API AMainGameStateBase : public AGameStateBase
 	TMap<FIntVector, AChunk*> ChunksMap;
 	TQueue<AChunk*> ChunksPool;
 
-	friend void AChunk::CloseLoading();
 	TDoubleLinkedList<AChunk*> LoadChunksQueue;
 	TQueue<AChunk*> UnloadChunksQueue;
 	

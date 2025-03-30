@@ -393,7 +393,7 @@ void AChunk::UnloadPlanesTouching(const EFaceDirection FaceDir) const
 	}
 }
 
-AChunk::AChunk()
+AChunk::AChunk() : InLoadChunksQueue(nullptr)
 {
 	PrimaryActorTick.bCanEverTick = false;
 	
@@ -448,12 +448,6 @@ void AChunk::EndUnloading()
 {
 	State = EState::Unloaded;
 	SetActorHiddenInGame(true);
-}
-
-void AChunk::CloseLoading()
-{
-	if(auto NodeToRemove = MainGameState->LoadChunksQueue.FindNode(this))
-		MainGameState->LoadChunksQueue.RemoveNode(NodeToRemove);
 }
 
 void AChunk::SetBlock(const size_t InChunkIndex, const size_t TypeIndex)
