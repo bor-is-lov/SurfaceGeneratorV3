@@ -26,7 +26,7 @@ void AMainGameStateBase::BeginPlay()
 	AMainPlayerController* Controller = Cast<AMainPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
 	if(Controller)
 	{
-		const int count = pow(Controller->GetRenderDistance() * 2 + 1, 3) * Controller->GetZScale();
+		const int count = pow(Controller->GetRenderDistance() * 2 + 1, 3) * Controller->GetZScale() * 1.6f;
 		for (int i = 0; i < count; i++)
 		{
 			AChunk* Ptr = GetWorld()->SpawnActor<AChunk>();
@@ -39,25 +39,32 @@ void AMainGameStateBase::BeginPlay()
 
 void AMainGameStateBase::Tick(float DeltaTime)
 {
+	uint64 TickStart = FPlatformTime::Cycles();
 	Super::Tick(DeltaTime);
-
+	
 	AChunk* Chunk;
 	
-	for(int i = 0; i < 8; i++)
+	while(true)
 	{
 		if(UnloadChunksQueue.Dequeue(Chunk))
 		{
-			Chunk->UnloadPlanes();
+			Chunk->UnloadMeshes();
 			Chunk->EndUnloading();
+			if(uint64 TickEnd = FPlatformTime::Cycles();
+				static_cast<double>(TickEnd - TickStart) * FPlatformTime::GetSecondsPerCycle() >= 0.005)
+				break;
 		}
 		else if(!LoadChunksQueue.IsEmpty())
 		{
 			Chunk = LoadChunksQueue.GetHead()->GetValue();
 			TerrainGenerator->GenerateChunk(Chunk);
-			Chunk->LoadPlanes();
+			Chunk->LoadMeshes();
 			Chunk->EndLoading();
 			LoadChunksQueue.RemoveNode(LoadChunksQueue.GetHead());
 			Chunk->InLoadChunksQueue = nullptr;
+			if(uint64 TickEnd = FPlatformTime::Cycles();
+				static_cast<double>(TickEnd - TickStart) * FPlatformTime::GetSecondsPerCycle() >= 0.005)
+				break;
 		}
 		else
 			break;

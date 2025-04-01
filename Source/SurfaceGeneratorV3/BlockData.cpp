@@ -12,19 +12,19 @@ void FBlockData::EmptyBlock()
 	DefaultsIndex = -1;
 }
 
-FBlockDefaults* FBlockData::GetDefaults(const UWorld* World) const
+const FBlockDefaults* FBlockData::GetDefaults(const AMainGameStateBase* MainGameState) const
 {
-	return &World->GetGameStateChecked<AMainGameStateBase>()->BlocksDefaults[DefaultsIndex];
+	return &MainGameState->BlocksDefaults[DefaultsIndex];
 }
 
-FBlockDefaults* FBlockData::GetDefaults(const UWorld* World, const int Index)
+const FBlockDefaults* FBlockData::GetDefaults(const AMainGameStateBase* MainGameState, const int Index)
 {
-	return &World->GetGameStateChecked<AMainGameStateBase>()->BlocksDefaults[Index];
+	return &MainGameState->BlocksDefaults[Index];
 }
 
-int FBlockData::GetTextureIndex(const UWorld* World, const EFaceDirection FaceDir) const
+int FBlockData::GetTextureIndex(const AMainGameStateBase* MainGameState, const EFaceDirection FaceDir) const
 {
-	FBlockDefaults& Defaults =  World->GetGameStateChecked<AMainGameStateBase>()->BlocksDefaults[DefaultsIndex];
+	const FBlockDefaults& Defaults =  MainGameState->BlocksDefaults[DefaultsIndex];
 
 	switch (FaceDir)
 	{
@@ -70,10 +70,10 @@ int FBlockData::GetTextureIndex(const UWorld* World, const EFaceDirection FaceDi
 	return 0;
 }
 
-bool FBlockData::ShouldAddFace(const UWorld* World, const FBlockData* TouchingBlock) const
+bool FBlockData::ShouldAddFace(const AMainGameStateBase* MainGameState, const FBlockData* TouchingBlock) const
 {
-	const FBlockDefaults* Defaults = GetDefaults(World);
-	const FBlockDefaults* TouchingDefaults = TouchingBlock ? GetDefaults(World, TouchingBlock->DefaultsIndex) : nullptr;
+	const FBlockDefaults* Defaults = GetDefaults(MainGameState);
+	const FBlockDefaults* TouchingDefaults = TouchingBlock ? GetDefaults(MainGameState, TouchingBlock->DefaultsIndex) : nullptr;
 	if(Defaults->Shape == EShape::Cube && (TouchingDefaults && !TouchingDefaults->bIsSolid))
 		return true;
 	return false;

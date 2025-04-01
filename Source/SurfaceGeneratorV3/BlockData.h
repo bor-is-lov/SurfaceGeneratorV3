@@ -4,6 +4,8 @@
 #include "BlockDefaults.h"
 #include "BlockData.generated.h"
 
+class AMainGameStateBase;
+
 UENUM(BlueprintType)
 enum class EFaceDirection : uint8
 {
@@ -25,8 +27,8 @@ struct FBlockData
 	void SetBlock(const int TypeIndex);
 	void EmptyBlock();
 
-	FBlockDefaults* GetDefaults(const UWorld* World) const;
-	static FBlockDefaults* GetDefaults(const UWorld* World, const int Index);
-	int GetTextureIndex(const UWorld* World, const EFaceDirection FaceDir) const;
-	bool ShouldAddFace(const UWorld* World, const FBlockData* TouchingBlock) const;
+	const FBlockDefaults* GetDefaults(const AMainGameStateBase* MainGameState) const;
+	static const FBlockDefaults* GetDefaults(const AMainGameStateBase* MainGameState, const int Index);
+	int GetTextureIndex(const AMainGameStateBase* MainGameState, const EFaceDirection FaceDir) const;
+	bool ShouldAddFace(const AMainGameStateBase* MainGameState, const FBlockData* TouchingBlock) const;
 };
