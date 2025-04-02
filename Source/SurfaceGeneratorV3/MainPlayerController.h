@@ -7,6 +7,7 @@
 #include "InputMappingContext.h"
 #include "MainPlayerController.generated.h"
 
+class AChunk;
 /**
  * Sets up Input Mapping Context
  * PlayerChunkLocation is Chunk's location the player currently in
@@ -19,6 +20,9 @@ class SURFACEGENERATORV3_API AMainPlayerController : public APlayerController
 	int ActualRenderDistance = 0;
 	float ActualZScale = 0.5f;
 	bool bCanMove = true;
+	
+	TStaticArray<AChunk*, 27> CollisionEnabledChunks;
+	void UpdateChunksCollision();
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
@@ -31,7 +35,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chunk")
 	float ZScale = 0.5f;
 	
-public:	
+public:
 	virtual void SetupInputComponent() override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;

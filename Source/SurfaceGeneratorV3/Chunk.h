@@ -22,9 +22,9 @@ public:
 	
 private:	
 	EState State;
-
+	bool bCollisionEnabled = false;
+	
 	UMaterial* BlocksMaterial;
-
 	class AMainGameStateBase* MainGameState;
 
 	void LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex, const AChunk* Touching);
@@ -59,6 +59,8 @@ public:
 	void EndUnloading();
 
 	inline EState GetState() const { return State; }
+	inline bool GetbCollisionEnabled() const { return bCollisionEnabled; }
+	void SetbCollisionEnabled(bool NewCollisionEnabled);
 
 	void SetBlock(const size_t InChunkIndex, const size_t TypeIndex);
 	

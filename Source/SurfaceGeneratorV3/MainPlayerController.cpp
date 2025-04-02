@@ -27,6 +27,7 @@ void AMainPlayerController::BeginPlay()
 
 	PlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
 	Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(ActualRenderDistance, ActualZScale, PlayerChunkLocation);
+	UpdateChunksCollision();
 }
 
 void AMainPlayerController::Tick(float DeltaTime)
@@ -75,5 +76,42 @@ void AMainPlayerController::Tick(float DeltaTime)
 		
 		PlayerChunkLocation = ActualPlayerChunkLocation;
 		Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(ActualRenderDistance, ActualZScale, PlayerChunkLocation);
+		UpdateChunksCollision();
 	}
+}
+
+void AMainPlayerController::UpdateChunksCollision()
+{
+	TStaticArray<AChunk*, 27> ToDisableCollisionChunks;
+	for(int i = 0; i < 27; i++)
+		ToDisableCollisionChunks[i] = CollisionEnabledChunks[i];
+
+	{
+		int i = 0;
+		for(int x = -1; x <= 1; x++)
+			for(int y = -1; y <= 1; y++)
+				for(int z = -1; z <= 1; z++)
+					CollisionEnabledChunks[i++] = GetWorld()->GetGameStateChecked<AMainGameStateBase>()->GetChunk({
+					PlayerChunkLocation.X + x,
+					PlayerChunkLocation.Y + y,
+					PlayerChunkLocation.Z + z});
+	}
+
+	for(AChunk* ToDisableCollisionChunk : ToDisableCollisionChunks)
+		if(ToDisableCollisionChunk)
+		{
+			bool ShouldStopCollision = true;
+			for(AChunk* CollisionEnabledChunk : CollisionEnabledChunks)
+				if(ToDisableCollisionChunk == CollisionEnabledChunk)
+				{
+					ShouldStopCollision = false;
+					break;
+				}
+			if(ShouldStopCollision)
+				ToDisableCollisionChunk->SetbCollisionEnabled(false);
+		}
+	
+	for(AChunk* Chunk : CollisionEnabledChunks)
+		if(Chunk)
+			Chunk->SetbCollisionEnabled(true);
 }

@@ -138,7 +138,10 @@ void AChunk::LoadBoxes()
 			Box->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 			Box->RegisterComponent();
 			Box->SetComponentTickEnabled(false);
-			Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			if(bCollisionEnabled)
+				Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			else
+				Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			Box->SetCollisionResponseToAllChannels(ECR_Block);
 			Box->SetRelativeLocation({(x1 + x2 + 1) * 50.0f, (y1 + y2 + 1) * 50.0f, (z1 + z2 + 1) * 50.0f});
 			Box->SetBoxExtent({(x2 - x1 + 1) * 50.0f, (y2 - y1 + 1) * 50.0f, (z2 - z1 + 1) * 50.0f});
@@ -529,6 +532,20 @@ void AChunk::EndUnloading()
 {
 	State = EState::Unloaded;
 	SetActorHiddenInGame(true);
+}
+
+void AChunk::SetbCollisionEnabled(bool NewCollisionEnabled)
+{
+	if(NewCollisionEnabled != bCollisionEnabled)
+	{
+		if(NewCollisionEnabled)
+			for(auto& Box : SolidBoxes)
+				Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		else
+			for(auto& Box : SolidBoxes)
+				Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		bCollisionEnabled = NewCollisionEnabled;
+	}
 }
 
 void AChunk::SetBlock(const size_t InChunkIndex, const size_t TypeIndex)
