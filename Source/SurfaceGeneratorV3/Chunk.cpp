@@ -5,158 +5,6 @@
 #include "Components/BoxComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 
-void AChunk::LoadPlanes()
-{
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	AChunk* Touching = MainGameState->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
-	if(Touching && Touching->State == EState::Loaded)
-	{
-		for(int x = 0; x < 16; x++)
-			LoadPlanesAtIndex(EFaceDirection::XPositive, x, Touching);
-		Touching->LoadPlanesAtIndex(EFaceDirection::XNegative, 0, this);
-	}
-	else
-		for(int x = 0; x < 16; x++)
-			LoadPlanesAtIndex(EFaceDirection::XPositive, x, nullptr);
-	
-	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
-	if(Touching && Touching->State == EState::Loaded)
-	{
-		for(int y = 0; y < 16; y++)
-			LoadPlanesAtIndex(EFaceDirection::YPositive, y, Touching);
-		Touching->LoadPlanesAtIndex(EFaceDirection::YNegative, 0, this);
-	}
-	else
-		for(int y = 0; y < 16; y++)
-			LoadPlanesAtIndex(EFaceDirection::YPositive, y, nullptr);
-	
-	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
-	if(Touching && Touching->State == EState::Loaded)
-	{
-		for(int z = 0; z < 16; z++)
-			LoadPlanesAtIndex(EFaceDirection::ZPositive, z, Touching);
-		Touching->LoadPlanesAtIndex(EFaceDirection::ZNegative, 0, this);
-	}
-	else
-		for(int z = 0; z < 16; z++)
-			LoadPlanesAtIndex(EFaceDirection::ZPositive, z, nullptr);
-	
-	Touching = MainGameState->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
-	if(Touching && Touching->State == EState::Loaded)
-	{
-		for(int x = 0; x < 16; x++)
-			LoadPlanesAtIndex(EFaceDirection::XNegative, x, Touching);
-		Touching->LoadPlanesAtIndex(EFaceDirection::XPositive, 15, this);
-	}
-	else
-		for(int x = 0; x < 16; x++)
-			LoadPlanesAtIndex(EFaceDirection::XNegative, x, nullptr);
-	
-	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
-	if(Touching && Touching->State == EState::Loaded)
-	{
-		for(int y = 0; y < 16; y++)
-			LoadPlanesAtIndex(EFaceDirection::YNegative, y, Touching);
-		Touching->LoadPlanesAtIndex(EFaceDirection::YPositive, 15, this);
-	}
-	else
-		for(int y = 0; y < 16; y++)
-			LoadPlanesAtIndex(EFaceDirection::YNegative, y, nullptr);
-	
-	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
-	if(Touching && Touching->State == EState::Loaded)
-	{
-		for(int z = 0; z < 16; z++)
-			LoadPlanesAtIndex(EFaceDirection::ZNegative, z, Touching);
-		Touching->LoadPlanesAtIndex(EFaceDirection::ZPositive, 15, this);
-	}
-	else
-		for(int z = 0; z < 16; z++)
-			LoadPlanesAtIndex(EFaceDirection::ZNegative, z, nullptr);
-}
-
-void AChunk::UnloadPlanes()
-{
-	Planes->ClearInstances();
-	
-	UnloadPlanesTouching(EFaceDirection::XPositive);
-	UnloadPlanesTouching(EFaceDirection::YPositive);
-	UnloadPlanesTouching(EFaceDirection::ZPositive);
-	UnloadPlanesTouching(EFaceDirection::XNegative);
-	UnloadPlanesTouching(EFaceDirection::YNegative);
-	UnloadPlanesTouching(EFaceDirection::ZNegative);
-}
-
-void AChunk::LoadBoxes()
-{
-	bool ShouldAddBox[4096] = {false}, BoxAdded[4096] = {false};
-	for(int i = 0; i < 4096; i++)
-		ShouldAddBox[i] =  BlocksData[i].GetDefaults(MainGameState)->bIsSolid
-						&& BlocksData[i].GetDefaults(MainGameState)->Shape == EShape::Cube;
-
-	for(int i = 0; i < 4096; i++)
-		if(ShouldAddBox[i] && !BoxAdded[i])
-		{
-			int x1, y1, z1;
-			BlockIndexToLocation(i, x1, y1, z1);
-			int x2 = x1, y2 = y1, z2 = z1;
-
-			for(; x2 < 16; x2++)
-				if(!(ShouldAddBox[LocationToBlockIndex(x2, y1, z1)] && !BoxAdded[LocationToBlockIndex(x2, y1, z1)]))
-					break;
-			x2--;
-
-			for(; y2 < 16; y2++)
-			{
-				bool ShouldAddRow = true;
-				for(int x = x1; x <= x2; x++)
-					if(!(ShouldAddBox[LocationToBlockIndex(x, y2, z1)] && !BoxAdded[LocationToBlockIndex(x, y2, z1)]))
-						ShouldAddRow = false;
-				if(!ShouldAddRow)
-					break;
-			}
-			y2--;
-
-			for(; z2 < 16; z2++)
-			{
-				bool ShouldAddSquare = true;
-				for(int x = x1; x <= x2; x++)
-					for(int y = y1; y <= y2; y++)
-						if(!(ShouldAddBox[LocationToBlockIndex(x, y, z2)] && !BoxAdded[LocationToBlockIndex(x, y, z2)]))
-							ShouldAddSquare = false;
-				if(!ShouldAddSquare)
-					break;
-			}
-			z2--;
-
-			for(int x = x1; x <= x2; x++)
-				for(int y = y1; y <= y2; y++)
-					for(int z = z1; z <= z2; z++)
-						BoxAdded[LocationToBlockIndex(x, y, z)] = true;
-
-			UBoxComponent* Box = NewObject<UBoxComponent>(this, UBoxComponent::StaticClass());
-			Box->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-			Box->RegisterComponent();
-			Box->SetComponentTickEnabled(false);
-			if(bCollisionEnabled)
-				Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-			else
-				Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			Box->SetCollisionResponseToAllChannels(ECR_Block);
-			Box->SetRelativeLocation({(x1 + x2 + 1) * 50.0f, (y1 + y2 + 1) * 50.0f, (z1 + z2 + 1) * 50.0f});
-			Box->SetBoxExtent({(x2 - x1 + 1) * 50.0f, (y2 - y1 + 1) * 50.0f, (z2 - z1 + 1) * 50.0f});
-			SolidBoxes.Add(Box);
-		}
-		
-}
-
-void AChunk::UnloadBoxes()
-{
-	for(auto& Box : SolidBoxes)
-		Box->ConditionalBeginDestroy();
-	SolidBoxes.Empty();
-}
-
 void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex, const AChunk* Touching)
 {
 	bool ShouldAddPlane[256] = {false};
@@ -198,19 +46,19 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 						{
 							const int tempX = x, tempY = y, tempZ = z;
 							*first = 0;
-							ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].ShouldAddFace(MainGameState,
-								&Touching->BlocksData[LocationToBlockIndex(x, y, z)]);
+							ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].
+								ShouldAddFace(MainGameState, &Touching->BlocksData[LocationToBlockIndex(x, y, z)]);
 							*first = FaceIndex;
 						}
 						else
-							ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(MainGameState,
-								nullptr);
+							ShouldAddPlane[*second * 16 + *third] =BlocksData[LocationToBlockIndex(x, y, z)].
+								ShouldAddFace(MainGameState, nullptr);
 						else
 						{
 							const int tempX = x, tempY = y, tempZ = z;
 							(*first)++;
-							ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].ShouldAddFace(MainGameState,
-								&BlocksData[LocationToBlockIndex(x, y, z)]);
+							ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].
+								ShouldAddFace(MainGameState, &BlocksData[LocationToBlockIndex(x, y, z)]);
 							(*first)--;
 						}
 			else
@@ -219,19 +67,19 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 					{
 						const int tempX = x, tempY = y, tempZ = z;
 						*first = 15;
-						ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].ShouldAddFace(MainGameState,
-							&Touching->BlocksData[LocationToBlockIndex(x, y, z)]);
+						ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].
+							ShouldAddFace(MainGameState, &Touching->BlocksData[LocationToBlockIndex(x, y, z)]);
 						*first = FaceIndex;
 					}
 					else
-						ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(x, y, z)].ShouldAddFace(MainGameState,
-							nullptr);
+						ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(x, y, z)].
+							ShouldAddFace(MainGameState, nullptr);
 					else
 					{
 						const int tempX = x, tempY = y, tempZ = z;
 						(*first)--;
-						ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].ShouldAddFace(MainGameState,
-							&BlocksData[LocationToBlockIndex(x, y, z)]);
+						ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].
+							ShouldAddFace(MainGameState, &BlocksData[LocationToBlockIndex(x, y, z)]);
 						(*first)++;
 					}
 		}
@@ -389,79 +237,391 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 					{ScaleX, ScaleY, 1.0f}};
 				break;
 			}
-			const int InstanceIndex = Planes->AddInstance(Transform);
-
-			if(BlocksMaterial)
+			
+			if(BlocksData[LocationToBlockIndex(*x1, *y1, *z1)].GetDefaults(MainGameState)->bIsSolid)
 			{
-				Planes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
-				Planes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
-				Planes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
+				const int InstanceIndex = SolidPlanes->AddInstance(Transform);
+				if(SolidBlocksMaterial)
+				{
+					SolidPlanes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
+					SolidPlanes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
+					SolidPlanes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
+				}
+			}
+			else
+			{
+				UStaticMeshComponent* Plane = NewObject<UStaticMeshComponent>(this, UStaticMeshComponent::StaticClass());
+				Plane->SetStaticMesh(PlaneMesh);
+				Plane->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+				Plane->RegisterComponent();
+				Plane->SetComponentTickEnabled(false);
+				Plane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				Plane->SetRelativeTransform(Transform);
+				TransparentPlanes.Add(Plane);
+
+				if(TransparentBlocksMaterial)
+				{
+					Plane->SetMaterial(0, TransparentBlocksMaterial);
+					Plane->SetScalarParameterValueOnMaterials("U_Tiling", ScaleX);
+					Plane->SetScalarParameterValueOnMaterials("V_Tiling", ScaleY);
+					Plane->SetScalarParameterValueOnMaterials("TextureIndex", TextureIndex);
+				}
 			}
 		}
 	}
 }
 
-void AChunk::UnloadPlanesTouching(const EFaceDirection FaceDir) const
+void AChunk::UnloadSolidPlanesTouching(const EFaceDirection FaceDir) const
 {
 	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
 	switch(FaceDir)
 	{
-		case EFaceDirection::XPositive:
-			ChunkLocation.X--;
-			break;
-		case EFaceDirection::XNegative:
-			ChunkLocation.X++;
-			break;
-		case EFaceDirection::YPositive:
-			ChunkLocation.Y--;
-			break;
-		case EFaceDirection::YNegative:
-			ChunkLocation.Y++;
-			break;
-		case EFaceDirection::ZPositive:
-			ChunkLocation.Z--;
-			break;
-		case EFaceDirection::ZNegative:
-			ChunkLocation.Z++;
-			break;
-		default:
-			__debugbreak();
+	case EFaceDirection::XPositive:
+		ChunkLocation.X--;
+		break;
+	case EFaceDirection::XNegative:
+		ChunkLocation.X++;
+		break;
+	case EFaceDirection::YPositive:
+		ChunkLocation.Y--;
+		break;
+	case EFaceDirection::YNegative:
+		ChunkLocation.Y++;
+		break;
+	case EFaceDirection::ZPositive:
+		ChunkLocation.Z--;
+		break;
+	case EFaceDirection::ZNegative:
+		ChunkLocation.Z++;
+		break;
+	default:
+		__debugbreak();
 	}
 	if(const AChunk* Touching = MainGameState->GetChunk(ChunkLocation))
 	{
 		FTransform Transform;
 		TArray<int32> ToRemove;
-		for(int i = 0; i < Touching->Planes->GetInstanceCount(); i++)
-			if(Touching->Planes->GetInstanceTransform(i, Transform))
+		for(int i = 0; i < Touching->SolidPlanes->GetInstanceCount(); i++)
+			if(Touching->SolidPlanes->GetInstanceTransform(i, Transform))
 				switch(FaceDir)
 				{
-					case EFaceDirection::XPositive:
-						if(Transform.GetLocation().X == 1600.0f)
-							ToRemove.Add(i);
-						break;
-					case EFaceDirection::XNegative:
-						if(Transform.GetLocation().X == 0.0f)
-							ToRemove.Add(i);
-						break;
-					case EFaceDirection::YPositive:
-						if(Transform.GetLocation().Y == 1600.0f)
-							ToRemove.Add(i);
-						break;
-					case EFaceDirection::YNegative:
-						if(Transform.GetLocation().Y == 0.0f)
-							ToRemove.Add(i);
-						break;
-					case EFaceDirection::ZPositive:
-						if(Transform.GetLocation().Z == 1600.0f)
-							ToRemove.Add(i);
-						break;
-					case EFaceDirection::ZNegative:
-						if(Transform.GetLocation().Z == 0.0f)
-							ToRemove.Add(i);
-						break;
+		case EFaceDirection::XPositive:
+			if(Transform.GetLocation().X == 1600.0f)
+				ToRemove.Add(i);
+					break;
+		case EFaceDirection::XNegative:
+			if(Transform.GetLocation().X == 0.0f)
+				ToRemove.Add(i);
+					break;
+		case EFaceDirection::YPositive:
+			if(Transform.GetLocation().Y == 1600.0f)
+				ToRemove.Add(i);
+					break;
+		case EFaceDirection::YNegative:
+			if(Transform.GetLocation().Y == 0.0f)
+				ToRemove.Add(i);
+					break;
+		case EFaceDirection::ZPositive:
+			if(Transform.GetLocation().Z == 1600.0f)
+				ToRemove.Add(i);
+					break;
+		case EFaceDirection::ZNegative:
+			if(Transform.GetLocation().Z == 0.0f)
+				ToRemove.Add(i);
+					break;
 				}
-		Touching->Planes->RemoveInstances(ToRemove);
+		Touching->SolidPlanes->RemoveInstances(ToRemove);
 	}
+}
+
+void AChunk::UnloadTransparentPlanesTouching(const EFaceDirection FaceDir) const
+{
+	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
+	switch(FaceDir)
+	{
+	case EFaceDirection::XPositive:
+		ChunkLocation.X--;
+		break;
+	case EFaceDirection::XNegative:
+		ChunkLocation.X++;
+		break;
+	case EFaceDirection::YPositive:
+		ChunkLocation.Y--;
+		break;
+	case EFaceDirection::YNegative:
+		ChunkLocation.Y++;
+		break;
+	case EFaceDirection::ZPositive:
+		ChunkLocation.Z--;
+		break;
+	case EFaceDirection::ZNegative:
+		ChunkLocation.Z++;
+		break;
+	default:
+		__debugbreak();
+	}
+	if(AChunk* Touching = MainGameState->GetChunk(ChunkLocation))
+	{
+		TArray<TObjectPtr<UStaticMeshComponent>> NewTransparentPlanes;
+		for(int i = 0; i < Touching->TransparentPlanes.Num(); i++)
+		{
+			FTransform Transform = Touching->TransparentPlanes[i]->GetRelativeTransform();
+			switch(FaceDir)
+			{
+			case EFaceDirection::XPositive:
+				if(Transform.GetLocation().X != 1600.0f)
+					NewTransparentPlanes.Add(Touching->TransparentPlanes[i]);
+				break;
+			case EFaceDirection::XNegative:
+				if(Transform.GetLocation().X != 0.0f)
+					NewTransparentPlanes.Add(Touching->TransparentPlanes[i]);
+				break;
+			case EFaceDirection::YPositive:
+				if(Transform.GetLocation().Y != 1600.0f)
+					NewTransparentPlanes.Add(Touching->TransparentPlanes[i]);
+				break;
+			case EFaceDirection::YNegative:
+				if(Transform.GetLocation().Y != 0.0f)
+					NewTransparentPlanes.Add(Touching->TransparentPlanes[i]);
+				break;
+			case EFaceDirection::ZPositive:
+				if(Transform.GetLocation().Z != 1600.0f)
+					NewTransparentPlanes.Add(Touching->TransparentPlanes[i]);
+				break;
+			case EFaceDirection::ZNegative:
+				if(Transform.GetLocation().Z != 0.0f)
+					NewTransparentPlanes.Add(Touching->TransparentPlanes[i]);
+				break;
+			}
+		}
+		for(auto& Plane : Touching->TransparentPlanes)
+			if(!NewTransparentPlanes.Contains(Plane))
+		Touching->TransparentPlanes = NewTransparentPlanes;
+	}
+}
+
+void AChunk::LoadPlanes()
+{
+	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
+	AChunk* Touching = MainGameState->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
+	if(Touching && Touching->State == EState::Loaded)
+	{
+		for(int x = 0; x < 16; x++)
+			LoadPlanesAtIndex(EFaceDirection::XPositive, x, Touching);
+		Touching->LoadPlanesAtIndex(EFaceDirection::XNegative, 0, this);
+	}
+	else
+		for(int x = 0; x < 16; x++)
+			LoadPlanesAtIndex(EFaceDirection::XPositive, x, nullptr);
+	
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
+	if(Touching && Touching->State == EState::Loaded)
+	{
+		for(int y = 0; y < 16; y++)
+			LoadPlanesAtIndex(EFaceDirection::YPositive, y, Touching);
+		Touching->LoadPlanesAtIndex(EFaceDirection::YNegative, 0, this);
+	}
+	else
+		for(int y = 0; y < 16; y++)
+			LoadPlanesAtIndex(EFaceDirection::YPositive, y, nullptr);
+	
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
+	if(Touching && Touching->State == EState::Loaded)
+	{
+		for(int z = 0; z < 16; z++)
+			LoadPlanesAtIndex(EFaceDirection::ZPositive, z, Touching);
+		Touching->LoadPlanesAtIndex(EFaceDirection::ZNegative, 0, this);
+	}
+	else
+		for(int z = 0; z < 16; z++)
+			LoadPlanesAtIndex(EFaceDirection::ZPositive, z, nullptr);
+	
+	Touching = MainGameState->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
+	if(Touching && Touching->State == EState::Loaded)
+	{
+		for(int x = 0; x < 16; x++)
+			LoadPlanesAtIndex(EFaceDirection::XNegative, x, Touching);
+		Touching->LoadPlanesAtIndex(EFaceDirection::XPositive, 15, this);
+	}
+	else
+		for(int x = 0; x < 16; x++)
+			LoadPlanesAtIndex(EFaceDirection::XNegative, x, nullptr);
+	
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
+	if(Touching && Touching->State == EState::Loaded)
+	{
+		for(int y = 0; y < 16; y++)
+			LoadPlanesAtIndex(EFaceDirection::YNegative, y, Touching);
+		Touching->LoadPlanesAtIndex(EFaceDirection::YPositive, 15, this);
+	}
+	else
+		for(int y = 0; y < 16; y++)
+			LoadPlanesAtIndex(EFaceDirection::YNegative, y, nullptr);
+	
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
+	if(Touching && Touching->State == EState::Loaded)
+	{
+		for(int z = 0; z < 16; z++)
+			LoadPlanesAtIndex(EFaceDirection::ZNegative, z, Touching);
+		Touching->LoadPlanesAtIndex(EFaceDirection::ZPositive, 15, this);
+	}
+	else
+		for(int z = 0; z < 16; z++)
+			LoadPlanesAtIndex(EFaceDirection::ZNegative, z, nullptr);
+}
+
+void AChunk::UnloadPlanes()
+{
+	SolidPlanes->ClearInstances();
+	for(auto& Plane : TransparentPlanes)
+		Plane->ConditionalBeginDestroy();
+	TransparentPlanes.Empty();
+	
+	UnloadSolidPlanesTouching(EFaceDirection::XPositive);
+	UnloadSolidPlanesTouching(EFaceDirection::YPositive);
+	UnloadSolidPlanesTouching(EFaceDirection::ZPositive);
+	UnloadSolidPlanesTouching(EFaceDirection::XNegative);
+	UnloadSolidPlanesTouching(EFaceDirection::YNegative);
+	UnloadSolidPlanesTouching(EFaceDirection::ZNegative);
+	UnloadTransparentPlanesTouching(EFaceDirection::XPositive);
+	UnloadTransparentPlanesTouching(EFaceDirection::YPositive);
+	UnloadTransparentPlanesTouching(EFaceDirection::ZPositive);
+	UnloadTransparentPlanesTouching(EFaceDirection::XNegative);
+	UnloadTransparentPlanesTouching(EFaceDirection::YNegative);
+	UnloadTransparentPlanesTouching(EFaceDirection::ZNegative);
+}
+
+void AChunk::LoadSolidBoxes()
+{
+	bool ShouldAddBox[4096] = {false}, BoxAdded[4096] = {false};
+	for(int i = 0; i < 4096; i++)
+		ShouldAddBox[i] =  BlocksData[i].GetDefaults(MainGameState)->bIsSolid
+						&& BlocksData[i].GetDefaults(MainGameState)->Shape == EShape::Cube;
+
+	for(int i = 0; i < 4096; i++)
+		if(ShouldAddBox[i] && !BoxAdded[i])
+		{
+			int x1, y1, z1;
+			BlockIndexToLocation(i, x1, y1, z1);
+			int x2 = x1, y2 = y1, z2 = z1;
+
+			for(; x2 < 16; x2++)
+				if(!(ShouldAddBox[LocationToBlockIndex(x2, y1, z1)] && !BoxAdded[LocationToBlockIndex(x2, y1, z1)]))
+					break;
+			x2--;
+
+			for(; y2 < 16; y2++)
+			{
+				bool ShouldAddRow = true;
+				for(int x = x1; x <= x2; x++)
+					if(!(ShouldAddBox[LocationToBlockIndex(x, y2, z1)] && !BoxAdded[LocationToBlockIndex(x, y2, z1)]))
+						ShouldAddRow = false;
+				if(!ShouldAddRow)
+					break;
+			}
+			y2--;
+
+			for(; z2 < 16; z2++)
+			{
+				bool ShouldAddSquare = true;
+				for(int x = x1; x <= x2; x++)
+					for(int y = y1; y <= y2; y++)
+						if(!(ShouldAddBox[LocationToBlockIndex(x, y, z2)] && !BoxAdded[LocationToBlockIndex(x, y, z2)]))
+							ShouldAddSquare = false;
+				if(!ShouldAddSquare)
+					break;
+			}
+			z2--;
+
+			for(int x = x1; x <= x2; x++)
+				for(int y = y1; y <= y2; y++)
+					for(int z = z1; z <= z2; z++)
+						BoxAdded[LocationToBlockIndex(x, y, z)] = true;
+
+			UBoxComponent* Box = NewObject<UBoxComponent>(this, UBoxComponent::StaticClass());
+			Box->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			Box->RegisterComponent();
+			Box->SetComponentTickEnabled(false);
+			if(bCollisionEnabled)
+				Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			else
+				Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Box->SetCollisionResponseToAllChannels(ECR_Block);
+			Box->SetRelativeLocation({(x1 + x2 + 1) * 50.0f, (y1 + y2 + 1) * 50.0f, (z1 + z2 + 1) * 50.0f});
+			Box->SetBoxExtent({(x2 - x1 + 1) * 50.0f, (y2 - y1 + 1) * 50.0f, (z2 - z1 + 1) * 50.0f});
+			SolidBoxes.Add(Box);
+		}
+}
+
+void AChunk::LoadLiquidBoxes()
+{
+	bool ShouldAddBox[4096] = {false}, BoxAdded[4096] = {false};
+	for(int i = 0; i < 4096; i++)
+		ShouldAddBox[i] = BlocksData[i].GetDefaults(MainGameState)->Shape == EShape::Liquid;
+
+	for(int i = 0; i < 4096; i++)
+		if(ShouldAddBox[i] && !BoxAdded[i])
+		{
+			int x1, y1, z1;
+			BlockIndexToLocation(i, x1, y1, z1);
+			int x2 = x1, y2 = y1, z2 = z1;
+
+			for(; x2 < 16; x2++)
+				if(!(ShouldAddBox[LocationToBlockIndex(x2, y1, z1)] && !BoxAdded[LocationToBlockIndex(x2, y1, z1)]))
+					break;
+			x2--;
+
+			for(; y2 < 16; y2++)
+			{
+				bool ShouldAddRow = true;
+				for(int x = x1; x <= x2; x++)
+					if(!(ShouldAddBox[LocationToBlockIndex(x, y2, z1)] && !BoxAdded[LocationToBlockIndex(x, y2, z1)]))
+						ShouldAddRow = false;
+				if(!ShouldAddRow)
+					break;
+			}
+			y2--;
+
+			for(; z2 < 16; z2++)
+			{
+				bool ShouldAddSquare = true;
+				for(int x = x1; x <= x2; x++)
+					for(int y = y1; y <= y2; y++)
+						if(!(ShouldAddBox[LocationToBlockIndex(x, y, z2)] && !BoxAdded[LocationToBlockIndex(x, y, z2)]))
+							ShouldAddSquare = false;
+				if(!ShouldAddSquare)
+					break;
+			}
+			z2--;
+
+			for(int x = x1; x <= x2; x++)
+				for(int y = y1; y <= y2; y++)
+					for(int z = z1; z <= z2; z++)
+						BoxAdded[LocationToBlockIndex(x, y, z)] = true;
+
+			UBoxComponent* Box = NewObject<UBoxComponent>(this, UBoxComponent::StaticClass());
+			Box->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			Box->RegisterComponent();
+			Box->SetComponentTickEnabled(false);
+			if(bCollisionEnabled)
+				Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			else
+				Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Box->SetCollisionResponseToAllChannels(ECR_Overlap);
+			Box->SetRelativeLocation({(x1 + x2 + 1) * 50.0f, (y1 + y2 + 1) * 50.0f, (z1 + z2 + 1) * 50.0f});
+			Box->SetBoxExtent({(x2 - x1 + 1) * 50.0f, (y2 - y1 + 1) * 50.0f, (z2 - z1 + 1) * 50.0f});
+			LiquidBoxes.Add(Box);
+		}
+}
+
+void AChunk::UnloadBoxes()
+{
+	for(auto& Box : SolidBoxes)
+		Box->ConditionalBeginDestroy();
+	SolidBoxes.Empty();
+	for(auto& Box : LiquidBoxes)
+		Box->ConditionalBeginDestroy();
+	LiquidBoxes.Empty();
 }
 
 AChunk::AChunk() : InLoadChunksQueue(nullptr)
@@ -471,15 +631,18 @@ AChunk::AChunk() : InLoadChunksQueue(nullptr)
 	SceneRoot = CreateDefaultSubobject<USceneComponent>("SceneRoot");
 	RootComponent = SceneRoot;
 
-	Planes = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>("Planes");
-	Planes->SetupAttachment(RootComponent);
+	SolidPlanes = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>("SolidPlanes");
+	SolidPlanes->SetupAttachment(RootComponent);
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Engine/BasicShapes/Plane.Plane"));
 	if(MeshAsset.Succeeded())
-		Planes->SetStaticMesh(MeshAsset.Object);
-	Planes->SetGenerateOverlapEvents(false);
-	Planes->SetComponentTickEnabled(false);
-	Planes->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	Planes->NumCustomDataFloats = 3;
+	{
+		SolidPlanes->SetStaticMesh(MeshAsset.Object);
+		PlaneMesh = MeshAsset.Object;
+	}
+	SolidPlanes->SetGenerateOverlapEvents(false);
+	SolidPlanes->SetComponentTickEnabled(false);
+	SolidPlanes->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SolidPlanes->NumCustomDataFloats = 3;
 	
 	BlocksData.SetNum(4096);
 }
@@ -491,14 +654,16 @@ void AChunk::BeginPlay()
 	SetActorTickEnabled(false);
 	SetActorHiddenInGame(true);
 	MainGameState = GetWorld()->GetGameStateChecked<AMainGameStateBase>();
-	BlocksMaterial = MainGameState->BlocksMaterial;
-	if(BlocksMaterial)
-		Planes->SetMaterial(0, BlocksMaterial);
+	SolidBlocksMaterial = MainGameState->SolidBlocksMaterial;
+	if(SolidBlocksMaterial)
+		SolidPlanes->SetMaterial(0, SolidBlocksMaterial);
+	TransparentBlocksMaterial = MainGameState->TransparentBlocksMaterial;
 }
 
 void AChunk::LoadMeshes()
 {
-	LoadBoxes();
+	LoadSolidBoxes();
+	LoadLiquidBoxes();
 	LoadPlanes();
 }
 
@@ -539,11 +704,19 @@ void AChunk::SetbCollisionEnabled(bool NewCollisionEnabled)
 	if(NewCollisionEnabled != bCollisionEnabled)
 	{
 		if(NewCollisionEnabled)
+		{
 			for(auto& Box : SolidBoxes)
 				Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			for(auto& Box : LiquidBoxes)
+				Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		}
 		else
+		{
 			for(auto& Box : SolidBoxes)
 				Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			for(auto& Box : LiquidBoxes)
+				Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
 		bCollisionEnabled = NewCollisionEnabled;
 	}
 }

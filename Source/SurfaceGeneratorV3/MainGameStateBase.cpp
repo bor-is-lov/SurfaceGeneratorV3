@@ -5,7 +5,7 @@
 #include "MainPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
-AMainGameStateBase::AMainGameStateBase(): BlocksMaterial(nullptr)
+AMainGameStateBase::AMainGameStateBase(): SolidBlocksMaterial(nullptr), TransparentBlocksMaterial(nullptr)
 {
 	srand(time(nullptr));
 	TerrainGenerator = new FTerrainGenerator(rand());

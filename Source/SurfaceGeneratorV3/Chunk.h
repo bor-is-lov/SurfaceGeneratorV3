@@ -20,19 +20,23 @@ class SURFACEGENERATORV3_API AChunk : public AActor
 public:
 	enum class EState{ Unloaded, Loading, Loaded, Unloading };
 	
-private:	
+private:
+	UStaticMesh* PlaneMesh;
 	EState State;
 	bool bCollisionEnabled = false;
 	
-	UMaterial* BlocksMaterial;
+	UMaterial* SolidBlocksMaterial;
+	UMaterial* TransparentBlocksMaterial;
 	class AMainGameStateBase* MainGameState;
 
 	void LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex, const AChunk* Touching);
-	void UnloadPlanesTouching(const EFaceDirection FaceDir) const;
+	void UnloadSolidPlanesTouching(const EFaceDirection FaceDir) const;
+	void UnloadTransparentPlanesTouching(const EFaceDirection FaceDir) const;
 	
 	void LoadPlanes();
 	void UnloadPlanes();
-	void LoadBoxes();
+	void LoadSolidBoxes();
+	void LoadLiquidBoxes();
 	void UnloadBoxes();
 	
 public:
@@ -49,9 +53,13 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<FBlockData> BlocksData;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	class UHierarchicalInstancedStaticMeshComponent* Planes;
+	class UHierarchicalInstancedStaticMeshComponent* SolidPlanes;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<TObjectPtr<class UBoxComponent>> SolidBoxes;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TArray<TObjectPtr<UStaticMeshComponent>> TransparentPlanes;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TArray<TObjectPtr<UBoxComponent>> LiquidBoxes;
 	
 	void StartLoading();
 	void EndLoading();

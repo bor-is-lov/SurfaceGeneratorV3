@@ -7,7 +7,8 @@ UENUM(BlueprintType)
 enum class EShape : uint8
 {
 	None = 0 UMETA(DisplayName = "None"),
-	Cube UMETA(DisplayName = "Cube")
+	Cube UMETA(DisplayName = "Cube"),
+	Liquid UMETA(DisplayName = "Liquid")
 };
 
 USTRUCT(BlueprintType)
