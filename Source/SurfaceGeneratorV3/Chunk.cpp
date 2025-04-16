@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Chunk.h"
+
+#include "MainCharacter.h"
 #include "MainGameStateBase.h"
 #include "Components/BoxComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
@@ -608,6 +610,8 @@ void AChunk::LoadLiquidBoxes()
 			else
 				Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			Box->SetCollisionResponseToAllChannels(ECR_Overlap);
+			Box->OnComponentBeginOverlap.AddDynamic(this, &AChunk::AChunk::OnWaterBeginOverlap);
+			Box->OnComponentEndOverlap.AddDynamic(this, &AChunk::OnWaterEndOverlap);
 			Box->SetRelativeLocation({(x1 + x2 + 1) * 50.0f, (y1 + y2 + 1) * 50.0f, (z1 + z2 + 1) * 50.0f});
 			Box->SetBoxExtent({(x2 - x1 + 1) * 50.0f, (y2 - y1 + 1) * 50.0f, (z2 - z1 + 1) * 50.0f});
 			LiquidBoxes.Add(Box);
@@ -774,4 +778,28 @@ size_t AChunk::LocationToBlockIndex(const FIntVector& Location)
 size_t AChunk::LocationToBlockIndex(const int x, const int y, const int z)
 {
 	return x * 256 + y * 16 + z;
+}
+
+void AChunk::OnWaterBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if(AMainCharacter* MainCharacter = Cast<AMainCharacter>(OtherActor))
+	{
+		if(OtherComp->GetName() == "CollisionCylinder")
+			MainCharacter->GetMainMovementComponent()->StartSwimming(3.0);
+		else if(OtherComp->GetName() == "CameraCollision")
+			MainCharacter->StartCameraSwimming();
+	}
+}
+
+void AChunk::OnWaterEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	int32 OtherBodyIndex)
+{
+	if(AMainCharacter* MainCharacter = Cast<AMainCharacter>(OtherActor))
+	{
+		if(OtherComp->GetName() == "CollisionCylinder")
+			MainCharacter->GetMainMovementComponent()->StopSwimming();
+		else if(OtherComp->GetName() == "CameraCollision")
+			MainCharacter->StopCameraSwimming();
+	}
 }

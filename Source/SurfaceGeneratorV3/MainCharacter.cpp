@@ -6,7 +6,8 @@
 #include "EnhancedInputComponent.h"
 #include "InputAction.h"
 
-AMainCharacter::AMainCharacter()
+AMainCharacter::AMainCharacter(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UMainCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -23,12 +24,15 @@ AMainCharacter::AMainCharacter()
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->bUseControllerDesiredRotation = true;
 	GetCharacterMovement()->bIgnoreBaseRotation = true;
+	
+	EndSprint();
 }
 
 void AMainCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	GetCharacterMovement()->Buoyancy = 0.9f;
 }
 
 void AMainCharacter::Tick(float DeltaTime)
@@ -47,6 +51,8 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 			Input->BindAction(LookInputAction, ETriggerEvent::Triggered, this, &AMainCharacter::Look);
 		if(MoveInputAction)
 			Input->BindAction(MoveInputAction, ETriggerEvent::Triggered, this, &AMainCharacter::Move);
+		if(MoveVerticalInputAction)
+			Input->BindAction(MoveVerticalInputAction, ETriggerEvent::Triggered, this, &AMainCharacter::MoveVertical);
 		if(JumpInputAction)
 			Input->BindAction(JumpInputAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 		if(SprintInputAction)
@@ -62,7 +68,7 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	}
 }
 
-void AMainCharacter::Look(const struct FInputActionInstance& Instance)
+void AMainCharacter::Look(const FInputActionInstance& Instance)
 {
 	FVector2D InputAxis = Instance.GetValue().Get<FVector2D>();
 	AddControllerYawInput(InputAxis.X);
@@ -77,5 +83,26 @@ void AMainCharacter::Move(const struct FInputActionInstance& Instance)
 		AddMovementInput(FRotationMatrix(FRotator(0.0, Controller->GetControlRotation().Yaw, 0.0)).GetUnitAxis(EAxis::X), InputAxis.X);
 		AddMovementInput(FRotationMatrix(FRotator(0.0, Controller->GetControlRotation().Yaw, 0.0)).GetUnitAxis(EAxis::Y), InputAxis.Y);
 	}
+}
+
+void AMainCharacter::MoveVertical(const FInputActionInstance& Instance)
+{
+	if(Controller)
+	{
+		float InputAxis = Instance.GetValue().Get<float>();
+		AddMovementInput(FRotationMatrix(FRotator(0.0, 0.0, Controller->GetControlRotation().Roll)).GetUnitAxis(EAxis::Z), InputAxis);
+	}
+}
+
+void AMainCharacter::BeginSprint()
+{
+	GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+	GetCharacterMovement()->MaxSwimSpeed = SprintSwimSpeed;
+}
+
+void AMainCharacter::EndSprint()
+{
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	GetCharacterMovement()->MaxSwimSpeed = SwimSpeed;
 }
 
