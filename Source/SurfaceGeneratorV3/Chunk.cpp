@@ -189,6 +189,7 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 			const float PosThird = (third1 + third2) / 2.0f * 100.0f + 50.0f;
 			float ScaleX = second2 - second1 + 1.0f;
 			float ScaleY = third2 - third1 + 1.0f;
+			float OffsetX = 0.0f, OffsetY = 0.0f;
 			FTransform Transform;
 			switch(FaceDir)
 			{
@@ -197,10 +198,17 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 					const float temp = ScaleX;
 					ScaleX = ScaleY;
 					ScaleY = temp;
+					if (BlocksData[LocationToBlockIndex(*x1, *y1, *z1)].GetDefaults(MainGameState)->Shape == EShape::Liquid)
+					{
+						OffsetY = -0.125f;
+						ScaleY -= 0.125f;
+					}
 					Transform =
 						{{0, -90, 90},
 						{FaceIndex * 100.0f + 100.0f, PosThird, PosSecond},
 						{ScaleX, ScaleY, 1.0f}};
+					if(BlocksData[LocationToBlockIndex(*x1, *y1, *z1)].GetDefaults(MainGameState)->Shape == EShape::Liquid)
+						Transform.SetLocation(Transform.GetLocation() + FVector{0.0f, 0.0f, -6.25f});
 					break;
 				}
 			case EFaceDirection::XNegative:
@@ -208,29 +216,52 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 					const float temp = ScaleX;
 					ScaleX = ScaleY;
 					ScaleY = temp;
+					if (BlocksData[LocationToBlockIndex(*x1, *y1, *z1)].GetDefaults(MainGameState)->Shape == EShape::Liquid)
+					{
+						OffsetY = -0.125f;
+						ScaleY -= 0.125f;
+					}
 					Transform =
 						{{0, 90, 90},
 						{FaceIndex * 100.0f, PosThird, PosSecond},
 						{ScaleX, ScaleY, 1.0f}};
+					if(BlocksData[LocationToBlockIndex(*x1, *y1, *z1)].GetDefaults(MainGameState)->Shape == EShape::Liquid)
+						Transform.SetLocation(Transform.GetLocation() + FVector{0.0f, 0.0f, -6.25f});
 					break;
 				}
 			case EFaceDirection::YPositive:
+				if (BlocksData[LocationToBlockIndex(*x1, *y1, *z1)].GetDefaults(MainGameState)->Shape == EShape::Liquid)
+				{
+					OffsetY = -0.125f;
+					ScaleY -= 0.125f;
+				}
 				Transform =
 					{{0, 0, 90},
 					{PosSecond, FaceIndex * 100.0f + 100.0f, PosThird},
 					{ScaleX, ScaleY, 1.0f}};
+					if(BlocksData[LocationToBlockIndex(*x1, *y1, *z1)].GetDefaults(MainGameState)->Shape == EShape::Liquid)
+						Transform.SetLocation(Transform.GetLocation() + FVector{0.0f, 0.0f, -6.25f});
 				break;
 			case EFaceDirection::YNegative:
+				if (BlocksData[LocationToBlockIndex(*x1, *y1, *z1)].GetDefaults(MainGameState)->Shape == EShape::Liquid)
+				{
+					OffsetY = -0.125f;
+					ScaleY -= 0.125f;
+				}
 				Transform =
 					{{0, 180, 90},
 					{PosSecond, FaceIndex * 100.0f, PosThird},
 					{ScaleX, ScaleY, 1.0f}};
+					if(BlocksData[LocationToBlockIndex(*x1, *y1, *z1)].GetDefaults(MainGameState)->Shape == EShape::Liquid)
+						Transform.SetLocation(Transform.GetLocation() + FVector{0.0f, 0.0f, -6.25f});
 				break;
 			case EFaceDirection::ZPositive:
 				Transform =
 					{{0, 0, 0},
 					{PosSecond, PosThird, FaceIndex * 100.0f + 100.0f},
 					{ScaleX, ScaleY, 1.0f}};
+					if(BlocksData[LocationToBlockIndex(*x1, *y1, *z1)].GetDefaults(MainGameState)->Shape == EShape::Liquid)
+						Transform.SetLocation(Transform.GetLocation() + FVector{0.0f, 0.0f, -12.5f});
 				break;
 			case EFaceDirection::ZNegative:
 				Transform =
@@ -248,6 +279,8 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 					SolidPlanes->SetCustomDataValue(InstanceIndex, 0, ScaleX);
 					SolidPlanes->SetCustomDataValue(InstanceIndex, 1, ScaleY);
 					SolidPlanes->SetCustomDataValue(InstanceIndex, 2, TextureIndex);
+					SolidPlanes->SetCustomDataValue(InstanceIndex, 3, OffsetX);
+					SolidPlanes->SetCustomDataValue(InstanceIndex, 4, OffsetY);
 				}
 			}
 			else
@@ -267,6 +300,8 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 					Plane->SetScalarParameterValueOnMaterials("U_Tiling", ScaleX);
 					Plane->SetScalarParameterValueOnMaterials("V_Tiling", ScaleY);
 					Plane->SetScalarParameterValueOnMaterials("TextureIndex", TextureIndex);
+					Plane->SetScalarParameterValueOnMaterials("U_Offset", 1.0f - ScaleX);
+					Plane->SetScalarParameterValueOnMaterials("V_Offset", 1.0f - ScaleY);
 				}
 			}
 		}
@@ -612,8 +647,8 @@ void AChunk::LoadLiquidBoxes()
 			Box->SetCollisionResponseToAllChannels(ECR_Overlap);
 			Box->OnComponentBeginOverlap.AddDynamic(this, &AChunk::AChunk::OnWaterBeginOverlap);
 			Box->OnComponentEndOverlap.AddDynamic(this, &AChunk::OnWaterEndOverlap);
-			Box->SetRelativeLocation({(x1 + x2 + 1) * 50.0f, (y1 + y2 + 1) * 50.0f, (z1 + z2 + 1) * 50.0f});
-			Box->SetBoxExtent({(x2 - x1 + 1) * 50.0f, (y2 - y1 + 1) * 50.0f, (z2 - z1 + 1) * 50.0f});
+			Box->SetRelativeLocation({(x1 + x2 + 1) * 50.0f, (y1 + y2 + 1) * 50.0f, (z1 + z2 + 1) * 50.0f - 6.25f});
+			Box->SetBoxExtent({(x2 - x1 + 1) * 50.0f, (y2 - y1 + 1) * 50.0f, (z2 - z1 + 1) * 50.0f - 6.25f});
 			LiquidBoxes.Add(Box);
 		}
 }
