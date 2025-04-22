@@ -44,28 +44,23 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 			for(; *third < 16; (*third)++)
 				if(FaceDir == EFaceDirection::XPositive || FaceDir == EFaceDirection::YPositive || FaceDir == EFaceDirection::ZPositive)
 					if(*first == 15)
-						if(Touching)
-						{
-							const int tempX = x, tempY = y, tempZ = z;
-							*first = 0;
-							ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].
-								ShouldAddFace(MainGameState, &Touching->BlocksData[LocationToBlockIndex(x, y, z)]);
-							*first = FaceIndex;
-						}
-						else
-							ShouldAddPlane[*second * 16 + *third] =BlocksData[LocationToBlockIndex(x, y, z)].
-								ShouldAddFace(MainGameState, nullptr);
-						else
-						{
-							const int tempX = x, tempY = y, tempZ = z;
-							(*first)++;
-							ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].
-								ShouldAddFace(MainGameState, &BlocksData[LocationToBlockIndex(x, y, z)]);
-							(*first)--;
-						}
-			else
-				if(*first == 0)
-					if(Touching)
+					{
+						const int tempX = x, tempY = y, tempZ = z;
+						*first = 0;
+						ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].
+							ShouldAddFace(MainGameState, &Touching->BlocksData[LocationToBlockIndex(x, y, z)]);
+						*first = FaceIndex;
+					}
+					else
+					{
+						const int tempX = x, tempY = y, tempZ = z;
+						(*first)++;
+						ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(tempX, tempY, tempZ)].
+							ShouldAddFace(MainGameState, &BlocksData[LocationToBlockIndex(x, y, z)]);
+						(*first)--;
+					}
+				else
+					if(*first == 0)
 					{
 						const int tempX = x, tempY = y, tempZ = z;
 						*first = 15;
@@ -73,9 +68,6 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 							ShouldAddFace(MainGameState, &Touching->BlocksData[LocationToBlockIndex(x, y, z)]);
 						*first = FaceIndex;
 					}
-					else
-						ShouldAddPlane[*second * 16 + *third] = BlocksData[LocationToBlockIndex(x, y, z)].
-							ShouldAddFace(MainGameState, nullptr);
 					else
 					{
 						const int tempX = x, tempY = y, tempZ = z;
@@ -308,203 +300,32 @@ void AChunk::LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex
 	}
 }
 
-void AChunk::UnloadSolidPlanesTouching(const EFaceDirection FaceDir) const
-{
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	switch(FaceDir)
-	{
-	case EFaceDirection::XPositive:
-		ChunkLocation.X--;
-		break;
-	case EFaceDirection::XNegative:
-		ChunkLocation.X++;
-		break;
-	case EFaceDirection::YPositive:
-		ChunkLocation.Y--;
-		break;
-	case EFaceDirection::YNegative:
-		ChunkLocation.Y++;
-		break;
-	case EFaceDirection::ZPositive:
-		ChunkLocation.Z--;
-		break;
-	case EFaceDirection::ZNegative:
-		ChunkLocation.Z++;
-		break;
-	default:
-		__debugbreak();
-	}
-	if(const AChunk* Touching = MainGameState->GetChunk(ChunkLocation))
-	{
-		FTransform Transform;
-		TArray<int32> ToRemove;
-		for(int i = 0; i < Touching->SolidPlanes->GetInstanceCount(); i++)
-			if(Touching->SolidPlanes->GetInstanceTransform(i, Transform))
-				switch(FaceDir)
-				{
-		case EFaceDirection::XPositive:
-			if(Transform.GetLocation().X == 1600.0f)
-				ToRemove.Add(i);
-					break;
-		case EFaceDirection::XNegative:
-			if(Transform.GetLocation().X == 0.0f)
-				ToRemove.Add(i);
-					break;
-		case EFaceDirection::YPositive:
-			if(Transform.GetLocation().Y == 1600.0f)
-				ToRemove.Add(i);
-					break;
-		case EFaceDirection::YNegative:
-			if(Transform.GetLocation().Y == 0.0f)
-				ToRemove.Add(i);
-					break;
-		case EFaceDirection::ZPositive:
-			if(Transform.GetLocation().Z == 1600.0f)
-				ToRemove.Add(i);
-					break;
-		case EFaceDirection::ZNegative:
-			if(Transform.GetLocation().Z == 0.0f)
-				ToRemove.Add(i);
-					break;
-				}
-		Touching->SolidPlanes->RemoveInstances(ToRemove);
-	}
-}
-
-void AChunk::UnloadTransparentPlanesTouching(const EFaceDirection FaceDir) const
-{
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	switch(FaceDir)
-	{
-	case EFaceDirection::XPositive:
-		ChunkLocation.X--;
-		break;
-	case EFaceDirection::XNegative:
-		ChunkLocation.X++;
-		break;
-	case EFaceDirection::YPositive:
-		ChunkLocation.Y--;
-		break;
-	case EFaceDirection::YNegative:
-		ChunkLocation.Y++;
-		break;
-	case EFaceDirection::ZPositive:
-		ChunkLocation.Z--;
-		break;
-	case EFaceDirection::ZNegative:
-		ChunkLocation.Z++;
-		break;
-	default:
-		__debugbreak();
-	}
-	if(AChunk* Touching = MainGameState->GetChunk(ChunkLocation))
-	{
-		TArray<TObjectPtr<UStaticMeshComponent>> NewTransparentPlanes;
-		for(int i = 0; i < Touching->TransparentPlanes.Num(); i++)
-		{
-			FTransform Transform = Touching->TransparentPlanes[i]->GetRelativeTransform();
-			switch(FaceDir)
-			{
-			case EFaceDirection::XPositive:
-				if(Transform.GetLocation().X != 1600.0f)
-					NewTransparentPlanes.Add(Touching->TransparentPlanes[i]);
-				break;
-			case EFaceDirection::XNegative:
-				if(Transform.GetLocation().X != 0.0f)
-					NewTransparentPlanes.Add(Touching->TransparentPlanes[i]);
-				break;
-			case EFaceDirection::YPositive:
-				if(Transform.GetLocation().Y != 1600.0f)
-					NewTransparentPlanes.Add(Touching->TransparentPlanes[i]);
-				break;
-			case EFaceDirection::YNegative:
-				if(Transform.GetLocation().Y != 0.0f)
-					NewTransparentPlanes.Add(Touching->TransparentPlanes[i]);
-				break;
-			case EFaceDirection::ZPositive:
-				if(Transform.GetLocation().Z != 1600.0f)
-					NewTransparentPlanes.Add(Touching->TransparentPlanes[i]);
-				break;
-			case EFaceDirection::ZNegative:
-				if(Transform.GetLocation().Z != 0.0f)
-					NewTransparentPlanes.Add(Touching->TransparentPlanes[i]);
-				break;
-			}
-		}
-		for(auto& Plane : Touching->TransparentPlanes)
-			if(!NewTransparentPlanes.Contains(Plane))
-		Touching->TransparentPlanes = NewTransparentPlanes;
-	}
-}
-
 void AChunk::LoadPlanes()
 {
-	FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
-	AChunk* Touching = MainGameState->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
-	if(Touching && Touching->State == EState::Loaded)
-	{
-		for(int x = 0; x < 16; x++)
-			LoadPlanesAtIndex(EFaceDirection::XPositive, x, Touching);
-		Touching->LoadPlanesAtIndex(EFaceDirection::XNegative, 0, this);
-	}
-	else
-		for(int x = 0; x < 16; x++)
-			LoadPlanesAtIndex(EFaceDirection::XPositive, x, nullptr);
-	
+	const FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
+	const AChunk* Touching = MainGameState->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
+	for(int x = 0; x < 16; x++)
+		LoadPlanesAtIndex(EFaceDirection::XPositive, x, Touching);
+
 	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
-	if(Touching && Touching->State == EState::Loaded)
-	{
-		for(int y = 0; y < 16; y++)
-			LoadPlanesAtIndex(EFaceDirection::YPositive, y, Touching);
-		Touching->LoadPlanesAtIndex(EFaceDirection::YNegative, 0, this);
-	}
-	else
-		for(int y = 0; y < 16; y++)
-			LoadPlanesAtIndex(EFaceDirection::YPositive, y, nullptr);
-	
+	for(int y = 0; y < 16; y++)
+		LoadPlanesAtIndex(EFaceDirection::YPositive, y, Touching);
+		
 	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
-	if(Touching && Touching->State == EState::Loaded)
-	{
-		for(int z = 0; z < 16; z++)
-			LoadPlanesAtIndex(EFaceDirection::ZPositive, z, Touching);
-		Touching->LoadPlanesAtIndex(EFaceDirection::ZNegative, 0, this);
-	}
-	else
-		for(int z = 0; z < 16; z++)
-			LoadPlanesAtIndex(EFaceDirection::ZPositive, z, nullptr);
-	
+	for(int z = 0; z < 16; z++)
+		LoadPlanesAtIndex(EFaceDirection::ZPositive, z, Touching);
+		
 	Touching = MainGameState->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
-	if(Touching && Touching->State == EState::Loaded)
-	{
-		for(int x = 0; x < 16; x++)
-			LoadPlanesAtIndex(EFaceDirection::XNegative, x, Touching);
-		Touching->LoadPlanesAtIndex(EFaceDirection::XPositive, 15, this);
-	}
-	else
-		for(int x = 0; x < 16; x++)
-			LoadPlanesAtIndex(EFaceDirection::XNegative, x, nullptr);
+	for(int x = 0; x < 16; x++)
+		LoadPlanesAtIndex(EFaceDirection::XNegative, x, Touching);
 	
 	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
-	if(Touching && Touching->State == EState::Loaded)
-	{
-		for(int y = 0; y < 16; y++)
-			LoadPlanesAtIndex(EFaceDirection::YNegative, y, Touching);
-		Touching->LoadPlanesAtIndex(EFaceDirection::YPositive, 15, this);
-	}
-	else
-		for(int y = 0; y < 16; y++)
-			LoadPlanesAtIndex(EFaceDirection::YNegative, y, nullptr);
+	for(int y = 0; y < 16; y++)
+		LoadPlanesAtIndex(EFaceDirection::YNegative, y, Touching);
 	
 	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
-	if(Touching && Touching->State == EState::Loaded)
-	{
-		for(int z = 0; z < 16; z++)
-			LoadPlanesAtIndex(EFaceDirection::ZNegative, z, Touching);
-		Touching->LoadPlanesAtIndex(EFaceDirection::ZPositive, 15, this);
-	}
-	else
-		for(int z = 0; z < 16; z++)
-			LoadPlanesAtIndex(EFaceDirection::ZNegative, z, nullptr);
+	for(int z = 0; z < 16; z++)
+		LoadPlanesAtIndex(EFaceDirection::ZNegative, z, Touching);
 }
 
 void AChunk::UnloadPlanes()
@@ -513,19 +334,6 @@ void AChunk::UnloadPlanes()
 	for(auto& Plane : TransparentPlanes)
 		Plane->ConditionalBeginDestroy();
 	TransparentPlanes.Empty();
-	
-	UnloadSolidPlanesTouching(EFaceDirection::XPositive);
-	UnloadSolidPlanesTouching(EFaceDirection::YPositive);
-	UnloadSolidPlanesTouching(EFaceDirection::ZPositive);
-	UnloadSolidPlanesTouching(EFaceDirection::XNegative);
-	UnloadSolidPlanesTouching(EFaceDirection::YNegative);
-	UnloadSolidPlanesTouching(EFaceDirection::ZNegative);
-	UnloadTransparentPlanesTouching(EFaceDirection::XPositive);
-	UnloadTransparentPlanesTouching(EFaceDirection::YPositive);
-	UnloadTransparentPlanesTouching(EFaceDirection::ZPositive);
-	UnloadTransparentPlanesTouching(EFaceDirection::XNegative);
-	UnloadTransparentPlanesTouching(EFaceDirection::YNegative);
-	UnloadTransparentPlanesTouching(EFaceDirection::ZNegative);
 }
 
 void AChunk::LoadSolidBoxes()
@@ -699,17 +507,102 @@ void AChunk::BeginPlay()
 	TransparentBlocksMaterial = MainGameState->TransparentBlocksMaterial;
 }
 
-void AChunk::LoadMeshes()
+void AChunk::LoadData()
 {
+	if(State != EState::Loading)
+		return;
+	MainGameState->TerrainGenerator->GenerateChunk(this);
+	State = EState::DataLoaded;
+}
+
+void AChunk::TryLoadMeshes()
+{
+	if(State != EState::DataLoaded)
+		return;
+	const FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
+	const AChunk* Touching = MainGameState->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
+	if(!Touching || (Touching->GetState() != EState::DataLoaded && Touching->GetState() != EState::Loaded))
+		return;
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
+	if(!Touching || (Touching->GetState() != EState::DataLoaded && Touching->GetState() != EState::Loaded))
+		return;
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
+	if(!Touching || (Touching->GetState() != EState::DataLoaded && Touching->GetState() != EState::Loaded))
+		return;
+	Touching = MainGameState->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
+	if(!Touching || (Touching->GetState() != EState::DataLoaded && Touching->GetState() != EState::Loaded))
+		return;
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
+	if(!Touching || (Touching->GetState() != EState::DataLoaded && Touching->GetState() != EState::Loaded))
+		return;
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
+	if(!Touching || (Touching->GetState() != EState::DataLoaded && Touching->GetState() != EState::Loaded))
+		return;
+	
 	LoadSolidBoxes();
 	LoadLiquidBoxes();
 	LoadPlanes();
+	
+	EndLoading();
+}
+
+void AChunk::TryLoadTouchingMeshes() const
+{
+	const FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
+	AChunk* Touching = MainGameState->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
+	if(Touching)
+		Touching->TryLoadMeshes();
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
+	if(Touching)
+		Touching->TryLoadMeshes();
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
+	if(Touching)
+		Touching->TryLoadMeshes();
+	Touching = MainGameState->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
+	if(Touching)
+		Touching->TryLoadMeshes();
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
+	if(Touching)
+		Touching->TryLoadMeshes();
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
+	if(Touching)
+		Touching->TryLoadMeshes();
 }
 
 void AChunk::UnloadMeshes()
 {
-	UnloadPlanes();
-	UnloadBoxes();
+	if(State == EState::Loaded || State == EState::Unloading)
+	{
+		SetActorHiddenInGame(true);
+	
+		UnloadPlanes();
+		UnloadBoxes();
+
+		State = EState::DataLoaded;
+	}
+}
+
+void AChunk::TryUnloadTouchingMeshes() const
+{
+	const FIntVector ChunkLocation = ChunkWorldLocationToChunkLocation(GetActorLocation());
+	AChunk* Touching = MainGameState->GetChunk({ChunkLocation.X + 1, ChunkLocation.Y, ChunkLocation.Z});
+	if(Touching)
+		Touching->UnloadMeshes();
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y + 1, ChunkLocation.Z});
+	if(Touching)
+		Touching->UnloadMeshes();
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z + 1});
+	if(Touching)
+		Touching->UnloadMeshes();
+	Touching = MainGameState->GetChunk({ChunkLocation.X - 1, ChunkLocation.Y, ChunkLocation.Z});
+	if(Touching)
+		Touching->UnloadMeshes();
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y - 1, ChunkLocation.Z});
+	if(Touching)
+		Touching->UnloadMeshes();
+	Touching = MainGameState->GetChunk({ChunkLocation.X, ChunkLocation.Y, ChunkLocation.Z - 1});
+	if(Touching)
+		Touching->UnloadMeshes();
 }
 
 void AChunk::StartLoading()

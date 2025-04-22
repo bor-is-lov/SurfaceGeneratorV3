@@ -18,7 +18,7 @@ class SURFACEGENERATORV3_API AChunk : public AActor
 	GENERATED_BODY()
 
 public:
-	enum class EState{ Unloaded, Loading, Loaded, Unloading };
+	enum class EState{ Unloaded, Loading, DataLoaded, Loaded, Unloading };
 	
 private:
 	UStaticMesh* PlaneMesh;
@@ -30,8 +30,6 @@ private:
 	class AMainGameStateBase* MainGameState;
 
 	void LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex, const AChunk* Touching);
-	void UnloadSolidPlanesTouching(const EFaceDirection FaceDir) const;
-	void UnloadTransparentPlanesTouching(const EFaceDirection FaceDir) const;
 	
 	void LoadPlanes();
 	void UnloadPlanes();
@@ -45,8 +43,11 @@ public:
 	AChunk();
 	virtual void BeginPlay() override;
 
-	void LoadMeshes();
+	void LoadData();
+	void TryLoadMeshes();
+	void TryLoadTouchingMeshes() const;
 	void UnloadMeshes();
+	void TryUnloadTouchingMeshes() const;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USceneComponent* SceneRoot;
