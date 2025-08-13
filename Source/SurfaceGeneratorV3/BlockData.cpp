@@ -76,5 +76,7 @@ bool FBlockData::ShouldAddFace(const AMainGameStateBase* MainGameState, const FB
 	const FBlockDefaults* TouchingDefaults = TouchingBlock ? GetDefaults(MainGameState, TouchingBlock->DefaultsIndex) : nullptr;
 	if(Defaults->Shape == EShape::Cube && (TouchingDefaults && !TouchingDefaults->bIsSolid))
 		return true;
+	if(Defaults->Shape == EShape::Liquid && (TouchingDefaults && !TouchingDefaults->bIsSolid && TouchingDefaults != Defaults))
+		return true;
 	return false;
 }

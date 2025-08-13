@@ -5,7 +5,7 @@
 #include "MainPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
-AMainGameStateBase::AMainGameStateBase(): BlocksMaterial(nullptr)
+AMainGameStateBase::AMainGameStateBase(): SolidBlocksMaterial(nullptr), TransparentBlocksMaterial(nullptr)
 {
 	srand(time(nullptr));
 	TerrainGenerator = new FTerrainGenerator(rand());
@@ -49,6 +49,7 @@ void AMainGameStateBase::Tick(float DeltaTime)
 		if(UnloadChunksQueue.Dequeue(Chunk))
 		{
 			Chunk->UnloadMeshes();
+			Chunk->TryUnloadTouchingMeshes();
 			Chunk->EndUnloading();
 			if(uint64 TickEnd = FPlatformTime::Cycles();
 				static_cast<double>(TickEnd - TickStart) * FPlatformTime::GetSecondsPerCycle() >= 0.005)
@@ -57,9 +58,9 @@ void AMainGameStateBase::Tick(float DeltaTime)
 		else if(!LoadChunksQueue.IsEmpty())
 		{
 			Chunk = LoadChunksQueue.GetHead()->GetValue();
-			TerrainGenerator->GenerateChunk(Chunk);
-			Chunk->LoadMeshes();
-			Chunk->EndLoading();
+			Chunk->LoadData();
+			Chunk->TryLoadMeshes();
+			Chunk->TryLoadTouchingMeshes();
 			LoadChunksQueue.RemoveNode(LoadChunksQueue.GetHead());
 			Chunk->InLoadChunksQueue = nullptr;
 			if(uint64 TickEnd = FPlatformTime::Cycles();
@@ -114,12 +115,15 @@ void AMainGameStateBase::ExtractChunk(const FIntVector ChunkLocation)
 		AChunk* Chunk = *ChunksMap.Find(ChunkLocation);
 		switch(Chunk->GetState())
 		{
-		case AChunk::EState::Loaded:
-			Chunk->StartUnloading();
-			break;
 		case AChunk::EState::Loading:
 			if(Chunk->InLoadChunksQueue)
 				LoadChunksQueue.RemoveNode(Chunk->InLoadChunksQueue);
+			Chunk->StartUnloading();
+			break;
+		case AChunk::EState::DataLoaded:
+			Chunk->StartUnloading();
+			break;
+		case AChunk::EState::Loaded:
 			Chunk->StartUnloading();
 			break;
 		default:

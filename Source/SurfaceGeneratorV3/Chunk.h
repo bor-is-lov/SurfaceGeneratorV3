@@ -18,21 +18,23 @@ class SURFACEGENERATORV3_API AChunk : public AActor
 	GENERATED_BODY()
 
 public:
-	enum class EState{ Unloaded, Loading, Loaded, Unloading };
+	enum class EState{ Unloaded, Loading, DataLoaded, Loaded, Unloading };
 	
-private:	
+private:
+	UStaticMesh* PlaneMesh;
 	EState State;
 	bool bCollisionEnabled = false;
 	
-	UMaterial* BlocksMaterial;
+	UMaterial* SolidBlocksMaterial;
+	UMaterial* TransparentBlocksMaterial;
 	class AMainGameStateBase* MainGameState;
 
 	void LoadPlanesAtIndex(const EFaceDirection FaceDir, const int FaceIndex, const AChunk* Touching);
-	void UnloadPlanesTouching(const EFaceDirection FaceDir) const;
 	
 	void LoadPlanes();
 	void UnloadPlanes();
-	void LoadBoxes();
+	void LoadSolidBoxes();
+	void LoadLiquidBoxes();
 	void UnloadBoxes();
 	
 public:
@@ -41,17 +43,24 @@ public:
 	AChunk();
 	virtual void BeginPlay() override;
 
-	void LoadMeshes();
+	void LoadData();
+	void TryLoadMeshes();
+	void TryLoadTouchingMeshes() const;
 	void UnloadMeshes();
+	void TryUnloadTouchingMeshes() const;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USceneComponent* SceneRoot;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<FBlockData> BlocksData;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	class UHierarchicalInstancedStaticMeshComponent* Planes;
+	class UHierarchicalInstancedStaticMeshComponent* SolidPlanes;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<TObjectPtr<class UBoxComponent>> SolidBoxes;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TArray<TObjectPtr<UStaticMeshComponent>> TransparentPlanes;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TArray<TObjectPtr<UBoxComponent>> LiquidBoxes;
 	
 	void StartLoading();
 	void EndLoading();
@@ -72,4 +81,12 @@ public:
 	static void BlockIndexToLocation(const size_t& Index, int& x, int& y, int& z);
 	static size_t LocationToBlockIndex(const FIntVector& Location);
 	static size_t LocationToBlockIndex(const int x, const int y, const int z);
+
+	UFUNCTION()
+	void OnWaterBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+    
+	UFUNCTION()
+	void OnWaterEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex);
 };
