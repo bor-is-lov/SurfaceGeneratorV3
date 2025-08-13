@@ -1,3 +1,4 @@
+Build
 Binaries
 DerivedDataCache
 Intermediate
@@ -12,3 +13,4 @@ Saved
 *.suo
 *.xcodeproj
 *.xcworkspace
+*.DotSettings.user
