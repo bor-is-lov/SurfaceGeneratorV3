@@ -26,7 +26,7 @@ void AMainPlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	PlayerChunkLocation = AChunk::ActorLocationToChunkLocation(GetPawn()->GetActorLocation());
-	Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(ActualRenderDistance, ActualZScale, PlayerChunkLocation);
+	Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(ActualRenderDistance, ActualZRenderDistance, PlayerChunkLocation);
 	UpdateChunksCollision();
 }
 
@@ -56,26 +56,20 @@ void AMainPlayerController::Tick(float DeltaTime)
 		}
 	}
 
-	if (PlayerChunkLocation != ActualPlayerChunkLocation || ActualRenderDistance != RenderDistance || ActualZScale != ZScale)
+	if (PlayerChunkLocation != ActualPlayerChunkLocation || ActualRenderDistance != RenderDistance || ActualZRenderDistance != ZRenderDistance)
 	{
 		if(ActualRenderDistance < RenderDistance)
 			ActualRenderDistance++;
 		else if(ActualRenderDistance > RenderDistance)
 			ActualRenderDistance--;
 		
-		if(ActualZScale < ZScale)
-			if(ZScale - ActualZScale <= 0.1f)
-				ActualZScale = ZScale;
-			else
-				ActualZScale += 0.1f;
-		if(ActualZScale > ZScale)
-			if(ActualZScale - ZScale <= 0.1f)
-				ActualZScale = ZScale;
-			else
-				ActualZScale -= 0.1f;
+		if(ActualZRenderDistance < ZRenderDistance)
+        	ActualZRenderDistance++;
+        else if(ActualZRenderDistance > ZRenderDistance)
+        	ActualZRenderDistance--;
 		
 		PlayerChunkLocation = ActualPlayerChunkLocation;
-		Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(ActualRenderDistance, ActualZScale, PlayerChunkLocation);
+		Cast<AMainGameModeBase>(GetWorld()->GetAuthGameMode())->UpdateChunks(ActualRenderDistance, ActualZRenderDistance, PlayerChunkLocation);
 		UpdateChunksCollision();
 	}
 }

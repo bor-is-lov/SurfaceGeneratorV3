@@ -18,7 +18,7 @@ class SURFACEGENERATORV3_API AMainPlayerController : public APlayerController
 	GENERATED_BODY()
 
 	int ActualRenderDistance = 0;
-	float ActualZScale = 0.5f;
+	int ActualZRenderDistance = 0;
 	bool bCanMove = true;
 	
 	TStaticArray<AChunk*, 27> CollisionEnabledChunks;
@@ -33,7 +33,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chunk")
 	int RenderDistance = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chunk")
-	float ZScale = 0.5f;
+	int ZRenderDistance = 1;
 	
 public:
 	virtual void SetupInputComponent() override;
@@ -41,5 +41,5 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	inline int GetRenderDistance() const { return RenderDistance; }
-	inline float GetZScale() const { return ZScale; }
+	inline float GetZRenderDistance() const { return ZRenderDistance; }
 };

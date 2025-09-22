@@ -16,5 +16,5 @@ class SURFACEGENERATORV3_API AMainGameModeBase : public AGameModeBase
 	
 public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-	void UpdateChunks(int RenderDistance, float ZScale, FIntVector PlayerChunkLocation) const;
+	void UpdateChunks(int RenderDistance, int ZRenderDistance, FIntVector PlayerChunkLocation) const;
 };

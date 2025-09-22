@@ -26,7 +26,7 @@ void AMainGameStateBase::BeginPlay()
 	AMainPlayerController* Controller = Cast<AMainPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
 	if(Controller)
 	{
-		const int count = pow(Controller->GetRenderDistance() * 2 + 1, 3) * Controller->GetZScale() * 1.6f;
+		const int count = pow(Controller->GetRenderDistance() * 2 + 1, 2) * (Controller->GetZRenderDistance() * 2 + 1) * 1.6f;
 		for (int i = 0; i < count; i++)
 		{
 			AChunk* Ptr = GetWorld()->SpawnActor<AChunk>();
