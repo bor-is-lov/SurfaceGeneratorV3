@@ -2,6 +2,7 @@
 
 #include "MainGameStateBase.h"
 
+#include "MainGameUserSettings.h"
 #include "MainPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -22,12 +23,14 @@ AMainGameStateBase::~AMainGameStateBase()
 void AMainGameStateBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	AMainPlayerController* Controller = Cast<AMainPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
-	if(Controller)
+
+	const AMainPlayerController* Controller = Cast<AMainPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+	Settings = Cast<UMainGameUserSettings>(UGameUserSettings::GetGameUserSettings());
+	if(Controller)// && Settings)
 	{
-		const int count = pow(Controller->GetRenderDistance() * 2 + 1, 2) * (Controller->GetZRenderDistance() * 2 + 1) * 1.6f;
-		for (int i = 0; i < count; i++)
+		// 1.6f is 2 * pi / 4
+		//const int Count = pow(Settings->RenderDistance * 2 + 1, 2) * (Settings->ZRenderDistance * 2 + 1) * 1.6f;
+		for (int i = 0; i < 139369; i++) // value for RenderDistance = 32 and ZRenderDistance = 10, which are max
 		{
 			AChunk* Ptr = GetWorld()->SpawnActor<AChunk>();
 			ChunksPool.Enqueue(Ptr);
@@ -52,7 +55,8 @@ void AMainGameStateBase::Tick(float DeltaTime)
 			Chunk->TryUnloadTouchingMeshes();
 			Chunk->EndUnloading();
 			if(uint64 TickEnd = FPlatformTime::Cycles();
-				static_cast<double>(TickEnd - TickStart) * FPlatformTime::GetSecondsPerCycle() >= 0.005)
+				static_cast<double>(TickEnd - TickStart) * FPlatformTime::GetSecondsPerCycle() >=
+				(Settings->GetFrameRateLimit() > 0.0f ? 1.0f / Settings->GetFrameRateLimit() : 0.005))
 				break;
 		}
 		else if(!LoadChunksQueue.IsEmpty())
@@ -64,7 +68,8 @@ void AMainGameStateBase::Tick(float DeltaTime)
 			LoadChunksQueue.RemoveNode(LoadChunksQueue.GetHead());
 			Chunk->InLoadChunksQueue = nullptr;
 			if(uint64 TickEnd = FPlatformTime::Cycles();
-				static_cast<double>(TickEnd - TickStart) * FPlatformTime::GetSecondsPerCycle() >= 0.005)
+				static_cast<double>(TickEnd - TickStart) * FPlatformTime::GetSecondsPerCycle() >=
+				(Settings->GetFrameRateLimit() > 0.0f ? 1.0f / Settings->GetFrameRateLimit() : 0.005))
 				break;
 		}
 		else

@@ -22,6 +22,8 @@ class SURFACEGENERATORV3_API AMainGameStateBase : public AGameStateBase
 {
 	GENERATED_BODY()
 
+	class UMainGameUserSettings* Settings;
+	
 	TMap<FIntVector, AChunk*> ChunksMap;
 	TQueue<AChunk*> ChunksPool;
 
